@@ -25,7 +25,7 @@ export const InputForm: React.FC<InputFormProps> = ({
   hasHistory,
 }) => {
   const [internalInputValue, setInternalInputValue] = useState("");
-  const [effort, setEffort] = useState("medium");
+  const [effort, setEffort] = useState("high");
   const [model, setModel] = useState("gemini-2.5-flash-preview-04-17");
 
   const handleInternalSubmit = (e?: React.FormEvent) => {
