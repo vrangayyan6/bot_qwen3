@@ -119,10 +119,21 @@ export default function App() {
     async function fetchHistory() {
       try {
         const response = await fetch(`${API_URL}/sessions`);
+        if (!response.ok) {
+          console.error("Failed to fetch history: Network response was not ok", response.statusText);
+          setHistory([]); // Ensure history is an array even on error
+          return;
+        }
         const data = await response.json();
-        setHistory(data);
+        if (Array.isArray(data)) {
+          setHistory(data);
+        } else {
+          console.error("Failed to fetch history: Data is not an array", data);
+          setHistory([]); // Ensure history is an array if data format is incorrect
+        }
       } catch (error) {
         console.error("Failed to fetch history:", error);
+        setHistory([]); // Ensure history is an array on any other error
       }
     }
     fetchHistory();
