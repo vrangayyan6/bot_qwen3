@@ -1,10 +1,30 @@
 # mypy: disable - error - code = "no-untyped-def,misc"
 import pathlib
-from fastapi import FastAPI, Response
+from typing import List, Any
+from fastapi import FastAPI, Response, Body
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 # Define the FastAPI app
 app = FastAPI()
+
+# In-memory store for sessions
+sessions_db: List[Any] = []
+
+
+class SessionItem(BaseModel):
+    session_id: str
+    messages: List[Any] # Replace Any with your Message model if available
+    historicalActivities: Any # Replace Any with your Activity model if available
+
+@app.post("/sessions")
+async def save_session(session_item: SessionItem = Body(...)):
+    sessions_db.append(session_item.dict())
+    return {"status": "ok", "session_id": session_item.session_id}
+
+@app.get("/sessions")
+async def get_sessions() -> List[Any]:
+    return sessions_db
 
 
 def create_frontend_router(build_dir="../frontend/dist"):
