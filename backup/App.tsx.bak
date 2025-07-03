@@ -22,8 +22,6 @@ export default function App() {
   const [history, setHistory] = useState<any[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [streamingCompleted, setStreamingCompleted] = useState(false);
-
   const thread = useStream<{
     messages: Message[];
     initial_search_query_count: number;
@@ -104,7 +102,6 @@ export default function App() {
             body: JSON.stringify(newHistoryItem),
           });
           setHistory((prevHistory) => [newHistoryItem, ...prevHistory]);
-          setStreamingCompleted(true);
         } catch (error) {
           console.error("Failed to save history:", error);
         }
@@ -119,21 +116,10 @@ export default function App() {
     async function fetchHistory() {
       try {
         const response = await fetch(`${API_URL}/sessions`);
-        if (!response.ok) {
-          console.error("Failed to fetch history: Network response was not ok", response.statusText);
-          setHistory([]); // Ensure history is an array even on error
-          return;
-        }
         const data = await response.json();
-        if (Array.isArray(data)) {
-          setHistory(data);
-        } else {
-          console.error("Failed to fetch history: Data is not an array", data);
-          setHistory([]); // Ensure history is an array if data format is incorrect
-        }
+        setHistory(data);
       } catch (error) {
         console.error("Failed to fetch history:", error);
-        setHistory([]); // Ensure history is an array on any other error
       }
     }
     fetchHistory();
@@ -151,11 +137,10 @@ export default function App() {
   }, [messages]);
 
   useEffect(() => {
-    if (streamingCompleted) {
+    if (thread.messages.length > messages.length) {
       setMessages(thread.messages);
-      setStreamingCompleted(false);
     }
-  }, [streamingCompleted, thread.messages]);
+  }, [thread.messages, messages]);
 
   const handleSelectHistory = (historyItem: any) => {
     setThreadId(historyItem.session_id);

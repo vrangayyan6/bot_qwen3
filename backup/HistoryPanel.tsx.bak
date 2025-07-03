@@ -1,0 +1,36 @@
+import React from 'react';
+
+interface HistoryPanelProps {
+  history: any[];
+  onSelectHistory: (historyItem: any) => void;
+}
+
+export const HistoryPanel: React.FC<HistoryPanelProps> = ({
+  history,
+  onSelectHistory,
+}) => {
+  return (
+    <div className="flex flex-col h-full bg-neutral-900 p-4 w-64">
+      <h2 className="text-lg font-bold mb-4">History</h2>
+      <div className="overflow-y-auto">
+        {history.map((historyItem, index) => (
+          <div
+            key={index}
+            className="p-2 mb-2 cursor-pointer rounded-lg hover:bg-neutral-800"
+            onClick={() => onSelectHistory(historyItem)}
+          >
+            <p
+              className="text-sm font-medium truncate"
+              title={historyItem.messages[0]?.content}
+            >
+              {historyItem.messages[0]?.content}
+            </p>
+            <p className="text-xs text-neutral-400">
+              {new Date(historyItem.session_id).toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
