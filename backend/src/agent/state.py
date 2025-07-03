@@ -19,6 +19,7 @@ class OverallState(TypedDict):
     max_research_loops: int
     research_loop_count: int
     reasoning_model: str
+    images: Annotated[list, operator.add]
 
 
 class ReflectionState(TypedDict):
@@ -45,4 +46,4 @@ class WebSearchState(TypedDict):
 
 @dataclass(kw_only=True)
 class SearchStateOutput:
-    running_summary: str = field(default=None)  # Final report
+    running_summary: str | None = field(default=None)  # Final report

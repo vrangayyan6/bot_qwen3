@@ -1,17 +1,17 @@
-import type React from "react";
-import type { Message } from "@langchain/langgraph-sdk";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Copy, CopyCheck } from "lucide-react";
-import { InputForm } from "@/components/InputForm";
-import { Button } from "@/components/ui/button";
-import { useState, ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import {
-  ActivityTimeline,
-  ProcessedEvent,
+    ActivityTimeline,
+    ProcessedEvent,
 } from "@/components/ActivityTimeline"; // Assuming ActivityTimeline is in the same dir or adjust path
+import { InputForm } from "@/components/InputForm";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import type { Message } from "@langchain/langgraph-sdk";
+import { Copy, CopyCheck, Loader2 } from "lucide-react";
+import type React from "react";
+import { ReactNode, useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 // Markdown component props type from former ReportView
 type MdComponentProps = {
@@ -145,14 +145,56 @@ const HumanMessageBubble: React.FC<HumanMessageBubbleProps> = ({
   message,
   mdComponents,
 }) => {
+  // Try to parse the message content to check if it contains images
+  let messageData: { text: string; images?: string[] } | null = null;
+  let displayContent = message.content;
+  
+  if (typeof message.content === "string") {
+    try {
+      const parsed = JSON.parse(message.content);
+      if (parsed.text !== undefined) {
+        messageData = parsed;
+        displayContent = parsed.text;
+      }
+    } catch (e) {
+      // If parsing fails, use the original content
+      displayContent = message.content;
+    }
+  }
+
   return (
     <div
       className={`text-white rounded-3xl break-words min-h-7 bg-neutral-700 max-w-[100%] sm:max-w-[90%] px-4 pt-3 rounded-br-lg`}
     >
+      {/* Display images if present */}
+      {messageData?.images && messageData.images.length > 0 && (
+        <div className="mb-3 pb-3 border-b border-neutral-600">
+          <div className="flex flex-wrap gap-2">
+            {messageData.images.map((imageData, index) => (
+              <div key={index} className="relative">
+                <img
+                  src={imageData}
+                  alt={`Uploaded image ${index + 1}`}
+                  className="max-w-[200px] max-h-[200px] object-cover rounded-lg border border-neutral-600 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    // Create a modal or new window to show full-size image
+                    window.open(imageData, '_blank');
+                  }}
+                />
+                <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                  Click to expand
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Display text content */}
       <ReactMarkdown components={mdComponents}>
-        {typeof message.content === "string"
-          ? message.content
-          : JSON.stringify(message.content)}
+        {typeof displayContent === "string"
+          ? displayContent
+          : JSON.stringify(displayContent)}
       </ReactMarkdown>
     </div>
   );

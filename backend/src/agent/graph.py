@@ -222,10 +222,11 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
 
     Prepares the final output by deduplicating and formatting sources, then
     combining them with the running summary to create a well-structured
-    research report with proper citations.
+    research report with proper citations. Now supports multimodal analysis
+    with images if provided.
 
     Args:
-        state: Current graph state containing the running summary and sources gathered
+        state: Current graph state containing the running summary, sources gathered, and optional images
 
     Returns:
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
@@ -241,6 +242,30 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         summaries="\n---\n\n".join(state["web_research_result"]),
     )
 
+    # Check if we have images to include in the analysis
+    images = state.get("images", [])
+    
+    if images:
+        # For multimodal analysis, we need to modify the prompt to include image analysis
+        formatted_prompt += """
+
+IMPORTANT: You have been provided with image(s) that are relevant to this research topic. 
+Please analyze these images carefully and incorporate your visual analysis into your response.
+The images may contain:
+- Charts, graphs, or data visualizations
+- Screenshots of relevant information
+- Diagrams or technical illustrations
+- Any other visual content related to the research topic
+
+Your analysis should:
+1. Describe what you observe in the image(s)
+2. Explain how the visual information relates to the research topic
+3. Integrate the image analysis with the text-based research findings
+4. Provide insights that combine both visual and textual information
+
+Please provide a comprehensive analysis that leverages both the web research results and the visual content from the uploaded images.
+"""
+
     # init Reasoning Model, default to Gemini 2.5 Flash
     llm = ChatGoogleGenerativeAI(
         model=reasoning_model,
@@ -248,7 +273,41 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         max_retries=2,
         api_key=os.getenv("GEMINI_API_KEY"),
     )
-    result = llm.invoke(formatted_prompt)
+    
+    # Prepare the input for the LLM
+    if images:
+        # Convert base64 images to the format expected by LangChain
+        from langchain_core.messages import HumanMessage
+        
+        # Create content with text and images
+        message_content = [
+            {"type": "text", "text": formatted_prompt}
+        ]
+        
+        # Add images to the message content
+        for image_data in images:
+            # Extract the base64 data (remove data:image/xxx;base64, prefix if present)
+            if image_data.startswith('data:image'):
+                # Split by comma and take the second part (the actual base64 data)
+                base64_data = image_data.split(',')[1]
+                mime_type = image_data.split(';')[0].split(':')[1]
+            else:
+                base64_data = image_data
+                mime_type = "image/jpeg"  # Default assumption
+            
+            message_content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{mime_type};base64,{base64_data}"
+                }
+            })
+        
+        # Create a HumanMessage with multimodal content
+        message = HumanMessage(content=message_content)
+        result = llm.invoke([message])
+    else:
+        # Regular text-only analysis
+        result = llm.invoke(formatted_prompt)
 
     # Replace the short urls with the original urls and add all used urls to the sources_gathered
     unique_sources = []
