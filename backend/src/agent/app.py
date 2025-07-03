@@ -38,6 +38,32 @@ def create_frontend_router(build_dir="../frontend/dist"):
     """
     build_path = pathlib.Path(__file__).parent.parent.parent / build_dir
 
+    print(f"DEBUG: __file__ is {__file__}")
+    print(f"DEBUG: build_dir is {build_dir}")
+    print(f"DEBUG: Calculated build_path is {build_path}")
+    try:
+        abs_build_path = build_path.resolve()
+        print(f"DEBUG: Absolute build_path is {abs_build_path}")
+        print(f"DEBUG: build_path exists: {abs_build_path.exists()}")
+        print(f"DEBUG: build_path is_dir: {abs_build_path.is_dir()}")
+        index_html_path = abs_build_path / "index.html"
+        print(f"DEBUG: index_html_path is {index_html_path}")
+        print(f"DEBUG: index_html_path exists: {index_html_path.exists()}")
+        print(f"DEBUG: index_html_path is_file: {index_html_path.is_file()}")
+
+        # Try to list directories - this might fail if paths are incorrect or due to permissions
+        try:
+            frontend_dir_to_list = pathlib.Path("C:/AI-Programmi/new/gemini-fullstack-langgraph-quickstart/frontend")
+            print(f"DEBUG: Listing {frontend_dir_to_list}: {list(frontend_dir_to_list.iterdir()) if frontend_dir_to_list.exists() else 'DOES NOT EXIST'}")
+            frontend_dist_dir_to_list = pathlib.Path("C:/AI-Programmi/new/gemini-fullstack-langgraph-quickstart/frontend/dist")
+            print(f"DEBUG: Listing {frontend_dist_dir_to_list}: {list(frontend_dist_dir_to_list.iterdir()) if frontend_dist_dir_to_list.exists() else 'DOES NOT EXIST'}")
+        except Exception as e:
+            print(f"DEBUG: Error listing directories: {e}")
+
+    except Exception as e:
+        print(f"DEBUG: Error resolving or checking build_path: {e}")
+
+
     if not build_path.is_dir() or not (build_path / "index.html").is_file():
         print(
             f"WARN: Frontend build directory not found or incomplete at {build_path}. Serving frontend will likely fail."
