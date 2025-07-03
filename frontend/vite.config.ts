@@ -13,6 +13,7 @@ export default defineConfig({
     },
   },
   server: {
+    port: 5174,
     proxy: {
       // Proxy API requests to the backend server
       "/api": {
