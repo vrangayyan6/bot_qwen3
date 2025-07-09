@@ -3,9 +3,31 @@ import pathlib
 from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 import fastapi.exceptions
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 # Define the FastAPI app
 app = FastAPI()
+
+# Configure OpenTelemetry
+trace.set_tracer_provider(TracerProvider())
+tracer = trace.get_tracer(__name__)
+
+# Configure OTLP exporter
+# Ensure an OTLP endpoint is available, e.g., from an OpenTelemetry Collector
+# For local testing, you might run a collector in Docker:
+# docker run -d -p 4317:4317 -p 4318:4318 otel/opentelemetry-collector:latest
+otlp_exporter = OTLPSpanExporter(
+    # endpoint="http://localhost:4317",  # Uncomment and set if your collector is not on localhost
+    # insecure=True  # Set to False if using TLS
+)
+trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(otlp_exporter))
+
+# Instrument FastAPI
+FastAPIInstrumentor.instrument_app(app)
 
 
 def create_frontend_router(build_dir="../frontend/dist"):
