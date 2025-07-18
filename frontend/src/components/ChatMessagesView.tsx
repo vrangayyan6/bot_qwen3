@@ -253,9 +253,9 @@ export function ChatMessagesView({
     }
   };
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <ScrollArea className="flex-1 min-h-0" ref={scrollAreaRef}>
-        <div className="p-4 md:p-6 pb-2 space-y-2 max-w-4xl mx-auto">
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 overflow-y-auto" ref={scrollAreaRef}>
+        <div className="p-4 md:p-6 space-y-2 max-w-4xl mx-auto pt-16">
           {messages.map((message, index) => {
             const isLast = index === messages.length - 1;
             return (
