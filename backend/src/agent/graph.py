@@ -112,6 +112,8 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     )
 
     # Uses the google genai client as the langchain client doesn't return grounding metadata
+    print("---PROMPT---")
+    print(formatted_prompt)
     response = genai_client.models.generate_content(
         model=configurable.query_generator_model,
         contents=formatted_prompt,
@@ -120,6 +122,8 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
             "temperature": 0,
         },
     )
+    print("---RESPONSE---")
+    print(response)
     # resolve the urls to short urls for saving tokens and time
     resolved_urls = resolve_urls(
         response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
