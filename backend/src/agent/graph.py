@@ -41,7 +41,7 @@ genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 # Nodes
-def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
+def generate_query(state: OverallState, config: RunnableConfig) -> OverallState:
     """LangGraph node that generates search queries based on the User's question.
 
     Uses Gemini 2.0 Flash to create an optimized search queries for web research based on
@@ -78,17 +78,17 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     )
     # Generate the search queries
     result = structured_llm.invoke(formatted_prompt)
-    return {"search_query": result.query}
+    return {"generated_query": result.query}
 
 
-def continue_to_web_research(state: QueryGenerationState):
+def continue_to_web_research(state: OverallState):
     """LangGraph node that sends the search queries to the web research node.
 
     This is used to spawn n number of web research nodes, one for each search query.
     """
     return [
         Send("web_research", {"search_query": search_query, "id": int(idx)})
-        for idx, search_query in enumerate(state["search_query"])
+        for idx, search_query in enumerate(state["generated_query"])
     ]
 
 
