@@ -253,9 +253,11 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     # Replace the short urls with the original urls and add all used urls to the sources_gathered
     unique_sources = []
     for source in state["sources_gathered"]:
-        if source["short_url"] in result.content:
+        short_url = f"({source['short_url']})"
+        if short_url in result.content:
+            value = f"({source['value']})"
             result.content = result.content.replace(
-                source["short_url"], source["value"]
+                short_url, value
             )
             unique_sources.append(source)
 
