@@ -209,3 +209,5 @@ export const InputForm: React.FC<InputFormProps> = ({
     </form>
   );
 };
+
+// Note: The model options and their values can be adjusted based on the actual models available in your application.
