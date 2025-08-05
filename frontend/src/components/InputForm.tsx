@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { VoiceInput } from "@/components/VoiceInput";
 
 // Updated InputFormProps
 interface InputFormProps {
@@ -26,7 +27,7 @@ export const InputForm: React.FC<InputFormProps> = ({
 }) => {
   const [internalInputValue, setInternalInputValue] = useState("");
   const [effort, setEffort] = useState("medium");
-  const [model, setModel] = useState("gemini-2.5-flash-preview-04-17");
+  const [model, setModel] = useState("gemini-2.5-flash");
 
   const handleInternalSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -36,10 +37,32 @@ export const InputForm: React.FC<InputFormProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Submit with Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac)
+    // Submit with Enter (not Ctrl+Enter) - this is more intuitive
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      handleInternalSubmit();
+    }
+    // Allow Shift+Enter for new lines
+    // Allow Ctrl+Enter and Cmd+Enter as alternative submit methods
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleInternalSubmit();
+    }
+  };
+
+  const handleVoiceTranscription = (transcription: string, shouldAutoSubmit = false) => {
+    // Append transcription to existing input value or replace if empty
+    const newValue = internalInputValue.trim() 
+      ? `${internalInputValue} ${transcription}` 
+      : transcription;
+    console.log('Setting transcription value:', newValue); // Debug log
+    setInternalInputValue(newValue);
+    
+    // If auto-submit is requested, submit immediately with the new value
+    if (shouldAutoSubmit && newValue.trim()) {
+      console.log('Auto-submitting with new value:', newValue); // Debug log
+      onSubmit(newValue, effort, model);
+      setInternalInputValue("");
     }
   };
 
@@ -64,7 +87,16 @@ export const InputForm: React.FC<InputFormProps> = ({
                         md:text-base  min-h-[56px] max-h-[200px]`}
           rows={1}
         />
-        <div className="-mt-3">
+        <div className="flex items-center gap-2 -mt-3">
+          {/* Voice Input Button */}
+          <VoiceInput 
+            onTranscription={handleVoiceTranscription}
+            disabled={isLoading}
+            autoSubmit={true}
+            timeoutDuration={15000} // 15 seconds instead of 30
+          />
+          
+          {/* Submit/Cancel Button */}
           {isLoading ? (
             <Button
               type="button"
@@ -144,7 +176,7 @@ export const InputForm: React.FC<InputFormProps> = ({
                   </div>
                 </SelectItem>
                 <SelectItem
-                  value="gemini-2.5-flash-preview-04-17"
+                  value="gemini-2.5-flash"
                   className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
                 >
                   <div className="flex items-center">
