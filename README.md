@@ -33,6 +33,58 @@ Follow these steps to get the application running locally for development and te
     1.  Navigate to the `backend/` directory.
     2.  Create a file named `.env` by copying the `backend/.env.example` file.
     3.  Open the `.env` file and add your Gemini API key: `GEMINI_API_KEY="YOUR_ACTUAL_API_KEY"`
+ 
+
+This project uses a Python virtual environment to manage dependencies in an isolated environment named `myenv`.
+
+## Creating the Virtual Environment
+
+### On Windows (Command Prompt)
+
+```
+python -m venv myenv
+```
+
+### On Mac (macOS) / Linux (Terminal)
+
+```
+python3 -m venv myenv
+```
+
+## Activating the Virtual Environment
+
+### On Windows (Command Prompt)
+
+```
+.\myenv\Scripts\activate
+```
+
+*If you are using PowerShell, activate with:*
+
+```
+.\myenv\Scripts\Activate.ps1
+```
+
+### On Mac (macOS) / Linux (Terminal)
+
+```
+source myenv/bin/activate
+```
+
+## Deactivating the Virtual Environment
+
+To stop using the virtual environment, run:
+
+```
+deactivate
+```
+
+## Notes
+
+- After activation, Python and pip commands will use the isolated environment.
+- Remember to activate the environment each time you start a new terminal session before running your project.
+- To install packages, use `pip install <package_name>` while the environment is activated.
+
 
 **2. Install Dependencies:**
 
@@ -52,14 +104,22 @@ npm install
 
 **3. Run Development Servers:**
 
-**Backend & Frontend:**
+**Run Backend & Frontend in seperate windows:**
 
 ```bash
-make dev
+cd backend
+langgraph dev
+```
+**Open another window to run front end, first active venv again **
+
+```bash
+cd ..
+.\myenv\Scripts\activate
+npm run dev
 ```
 This will run the backend and frontend development servers.    Open your browser and navigate to the frontend development server URL (e.g., `http://localhost:5173/app`).
 
-_Alternatively, you can run the backend and frontend development servers separately. For the backend, open a terminal in the `backend/` directory and run `langgraph dev`. The backend API will be available at `http://127.0.0.1:2024`. It will also open a browser window to the LangGraph UI. For the frontend, open a terminal in the `frontend/` directory and run `npm run dev`. The frontend will be available at `http://localhost:5173`._
+
 
 ## How the Backend Agent Works (High-Level)
 
