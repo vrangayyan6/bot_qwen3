@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
@@ -28,12 +23,8 @@ interface ActivityTimelineProps {
   isLoading: boolean;
 }
 
-export function ActivityTimeline({
-  processedEvents,
-  isLoading,
-}: ActivityTimelineProps) {
-  const [isTimelineCollapsed, setIsTimelineCollapsed] =
-    useState<boolean>(false);
+export function ActivityTimeline({ processedEvents, isLoading }: ActivityTimelineProps) {
+  const [isTimelineCollapsed, setIsTimelineCollapsed] = useState<boolean>(false);
   const getEventIcon = (title: string, index: number) => {
     if (index === 0 && isLoading && processedEvents.length === 0) {
       return <Loader2 className="h-4 w-4 text-neutral-400 animate-spin" />;
@@ -85,9 +76,7 @@ export function ActivityTimeline({
                   <Loader2 className="h-3 w-3 text-neutral-400 animate-spin" />
                 </div>
                 <div>
-                  <p className="text-sm text-neutral-300 font-medium">
-                    Searching...
-                  </p>
+                  <p className="text-sm text-neutral-300 font-medium">Searching...</p>
                 </div>
               </div>
             )}
@@ -110,8 +99,8 @@ export function ActivityTimeline({
                         {typeof eventItem.data === "string"
                           ? eventItem.data
                           : Array.isArray(eventItem.data)
-                          ? (eventItem.data as string[]).join(", ")
-                          : JSON.stringify(eventItem.data)}
+                            ? (eventItem.data as string[]).join(", ")
+                            : JSON.stringify(eventItem.data)}
                       </p>
                     </div>
                   </div>
@@ -122,9 +111,7 @@ export function ActivityTimeline({
                       <Loader2 className="h-3 w-3 text-neutral-400 animate-spin" />
                     </div>
                     <div>
-                      <p className="text-sm text-neutral-300 font-medium">
-                        Searching...
-                      </p>
+                      <p className="text-sm text-neutral-300 font-medium">Searching...</p>
                     </div>
                   </div>
                 )}

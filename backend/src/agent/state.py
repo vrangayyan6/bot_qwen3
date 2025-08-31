@@ -1,13 +1,11 @@
 from __future__ import annotations
 
+import operator
 from dataclasses import dataclass, field
 from typing import TypedDict
 
 from langgraph.graph import add_messages
 from typing_extensions import Annotated
-
-
-import operator
 
 
 class OverallState(TypedDict):
@@ -19,6 +17,7 @@ class OverallState(TypedDict):
     max_research_loops: int
     research_loop_count: int
     reasoning_model: str
+    query_model: str
 
 
 class ReflectionState(TypedDict):

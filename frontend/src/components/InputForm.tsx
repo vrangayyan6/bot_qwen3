@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { SquarePen, Brain, Send, StopCircle, Zap, Cpu } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,12 @@ import {
 
 // Updated InputFormProps
 interface InputFormProps {
-  onSubmit: (inputValue: string, effort: string, model: string) => void;
+  onSubmit: (
+    inputValue: string,
+    effort: string,
+    queryModel: string,
+    reasoningModel: string
+  ) => void;
   onCancel: () => void;
   isLoading: boolean;
   hasHistory: boolean;
@@ -26,12 +31,42 @@ export const InputForm: React.FC<InputFormProps> = ({
 }) => {
   const [internalInputValue, setInternalInputValue] = useState("");
   const [effort, setEffort] = useState("medium");
-  const [model, setModel] = useState("gemini-2.5-flash-preview-04-17");
+  const [queryModel, setQueryModel] = useState("gemini-2.0-flash"); // Recommended for queries
+  const [reasoningModel, setReasoningModel] = useState("gemini-2.5-flash");
+
+  // Load saved user preferences on component mount
+  useEffect(() => {
+    const savedReasoningModel = localStorage.getItem("preferredReasoningModel");
+    if (savedReasoningModel) {
+      setReasoningModel(savedReasoningModel);
+    }
+  }, []);
+
+  // Helper to check if model is user's saved preference
+  const isPreferredModel = (modelValue: string) => {
+    return localStorage.getItem("preferredReasoningModel") === modelValue;
+  };
+
+  // Helper to get clean display name for model
+  const getModelDisplayName = (model: string) => {
+    switch (model) {
+      case "gemini-2.0-flash":
+        return "2.0 Flash";
+      case "gemini-2.5-flash":
+        return "2.5 Flash";
+      case "gemini-2.5-pro":
+        return "2.5 Pro";
+      case "gemini-2.5-flash-lite":
+        return "2.5 Flash Lite";
+      default:
+        return model;
+    }
+  };
 
   const handleInternalSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!internalInputValue.trim()) return;
-    onSubmit(internalInputValue, effort, model);
+    onSubmit(internalInputValue, effort, queryModel, reasoningModel);
     setInternalInputValue("");
   };
 
@@ -46,10 +81,7 @@ export const InputForm: React.FC<InputFormProps> = ({
   const isSubmitDisabled = !internalInputValue.trim() || isLoading;
 
   return (
-    <form
-      onSubmit={handleInternalSubmit}
-      className={`flex flex-col gap-2 p-3 pb-4`}
-    >
+    <form onSubmit={handleInternalSubmit} className={`flex flex-col gap-2 p-3 pb-4`}>
       <div
         className={`flex flex-row items-center justify-between text-white rounded-3xl rounded-bl-sm ${
           hasHistory ? "rounded-br-sm" : ""
@@ -57,7 +89,7 @@ export const InputForm: React.FC<InputFormProps> = ({
       >
         <Textarea
           value={internalInputValue}
-          onChange={(e) => setInternalInputValue(e.target.value)}
+          onChange={e => setInternalInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Who won the Euro 2024 and scored the most goals?"
           className={`w-full text-neutral-100 placeholder-neutral-500 resize-none border-0 focus:outline-none focus:ring-0 outline-none focus-visible:ring-0 shadow-none
@@ -127,24 +159,29 @@ export const InputForm: React.FC<InputFormProps> = ({
           </div>
           <div className="flex flex-row gap-2 bg-neutral-700 border-neutral-600 text-neutral-300 focus:ring-neutral-500 rounded-xl rounded-t-sm pl-2  max-w-[100%] sm:max-w-[90%]">
             <div className="flex flex-row items-center text-sm ml-2">
-              <Cpu className="h-4 w-4 mr-2" />
-              Model
+              <Zap className="h-4 w-4 mr-2" />
+              Query
             </div>
-            <Select value={model} onValueChange={setModel}>
+            <Select value={queryModel} onValueChange={setQueryModel}>
               <SelectTrigger className="w-[150px] bg-transparent border-none cursor-pointer">
-                <SelectValue placeholder="Model" />
+                <SelectValue placeholder="Query Model">
+                  {queryModel ? getModelDisplayName(queryModel) : "Query Model"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-neutral-700 border-neutral-600 text-neutral-300 cursor-pointer">
                 <SelectItem
                   value="gemini-2.0-flash"
                   className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
                 >
-                  <div className="flex items-center">
-                    <Zap className="h-4 w-4 mr-2 text-yellow-400" /> 2.0 Flash
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <Zap className="h-4 w-4 mr-2 text-yellow-400" /> 2.0 Flash
+                    </div>
+                    <span className="text-xs text-green-400 ml-2">✓ Recommended</span>
                   </div>
                 </SelectItem>
                 <SelectItem
-                  value="gemini-2.5-flash-preview-04-17"
+                  value="gemini-2.5-flash"
                   className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
                 >
                   <div className="flex items-center">
@@ -152,11 +189,79 @@ export const InputForm: React.FC<InputFormProps> = ({
                   </div>
                 </SelectItem>
                 <SelectItem
-                  value="gemini-2.5-pro-preview-05-06"
+                  value="gemini-2.5-pro"
                   className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
                 >
                   <div className="flex items-center">
                     <Cpu className="h-4 w-4 mr-2 text-purple-400" /> 2.5 Pro
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="gemini-2.5-flash-lite"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center">
+                    <Zap className="h-4 w-4 mr-2 text-emerald-400" /> 2.5 Flash Lite
+                    <span className="text-xs text-emerald-400 ml-2">💰 Cheapest</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-row gap-2 bg-neutral-700 border-neutral-600 text-neutral-300 focus:ring-neutral-500 rounded-xl rounded-t-sm pl-2  max-w-[100%] sm:max-w-[90%]">
+            <div className="flex flex-row items-center text-sm ml-2">
+              <Brain className="h-4 w-4 mr-2" />
+              Reasoning
+            </div>
+            <Select value={reasoningModel} onValueChange={setReasoningModel}>
+              <SelectTrigger className="w-[150px] bg-transparent border-none cursor-pointer">
+                <SelectValue placeholder="Reasoning Model">
+                  {reasoningModel ? getModelDisplayName(reasoningModel) : "Reasoning Model"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="bg-neutral-700 border-neutral-600 text-neutral-300 cursor-pointer">
+                <SelectItem
+                  value="gemini-2.0-flash"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <Zap className="h-4 w-4 mr-2 text-yellow-400" /> 2.0 Flash
+                    </div>
+                    {isPreferredModel("gemini-2.0-flash") && (
+                      <span className="text-xs text-blue-400 ml-2">💾 Saved</span>
+                    )}
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="gemini-2.5-flash"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <Zap className="h-4 w-4 mr-2 text-orange-400" /> 2.5 Flash
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!isPreferredModel("gemini-2.5-flash") && (
+                        <span className="text-xs text-green-400">✓ Recommended</span>
+                      )}
+                      {isPreferredModel("gemini-2.5-flash") && (
+                        <span className="text-xs text-blue-400">💾 Saved</span>
+                      )}
+                    </div>
+                  </div>
+                </SelectItem>
+                <SelectItem
+                  value="gemini-2.5-pro"
+                  className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <Cpu className="h-4 w-4 mr-2 text-purple-400" /> 2.5 Pro
+                    </div>
+                    {isPreferredModel("gemini-2.5-pro") && (
+                      <span className="text-xs text-blue-400 ml-2">💾 Saved</span>
+                    )}
                   </div>
                 </SelectItem>
               </SelectContent>

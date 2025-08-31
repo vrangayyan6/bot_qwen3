@@ -1,0 +1,76 @@
+# Pre-commit configuration for Gemini LangGraph Quickstart
+# See https://pre-commit.com for more information
+
+repos:
+  # Model Validation (Critical - prevents 404 model errors)
+  - repo: local
+    hooks:
+      - id: model-validation
+        name: Model Configuration Validation
+        entry: ./tests/test-model-validation.sh
+        language: script
+        always_run: true
+        pass_filenames: false
+        description: "Prevent frontend/backend model mismatches that cause 404 errors"
+
+  # Backend Python (Ruff - modern all-in-one tool)
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: Ruff Linting (Python)
+        entry: bash -c 'cd backend && ruff check --fix .'
+        language: system
+        files: ^backend/.*\.py$
+        description: "Fast Python linter (replaces flake8, isort, etc.)"
+      - id: ruff-format
+        name: Ruff Format (Python)
+        entry: bash -c 'cd backend && ruff format .'
+        language: system
+        files: ^backend/.*\.py$
+        description: "Fast Python formatter (replaces black)"
+
+  # Frontend TypeScript/React
+  - repo: local
+    hooks:
+      - id: eslint-frontend
+        name: ESLint (Frontend)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        description: "TypeScript/React linting"
+      - id: prettier-frontend
+        name: Prettier (Frontend)
+        entry: bash -c 'cd frontend && npm run format'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|md)$
+        description: "Frontend code formatting (auto-fix)"
+      - id: typescript-check
+        name: TypeScript Check
+        entry: bash -c 'cd frontend && npx tsc --noEmit'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        description: "TypeScript type checking"
+
+  # General file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        name: Check YAML
+        description: "Validate YAML syntax"
+      - id: check-json
+        name: Check JSON
+        description: "Validate JSON syntax"
+      - id: trailing-whitespace
+        name: Trim Trailing Whitespace
+        description: "Remove trailing whitespace"
+      - id: end-of-file-fixer
+        name: Fix End of Files
+        description: "Ensure files end with newline"
+      - id: check-merge-conflict
+        name: Check Merge Conflicts
+        description: "Check for merge conflict markers"
+
+# Global settings
+default_install_hook_types: [pre-commit]
+default_stages: [pre-commit]

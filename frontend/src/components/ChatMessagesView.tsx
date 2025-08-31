@@ -8,10 +8,7 @@ import { useState, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  ActivityTimeline,
-  ProcessedEvent,
-} from "@/components/ActivityTimeline"; // Assuming ActivityTimeline is in the same dir or adjust path
+import { ActivityTimeline, ProcessedEvent } from "@/components/ActivityTimeline"; // Assuming ActivityTimeline is in the same dir or adjust path
 
 // Markdown component props type from former ReportView
 type MdComponentProps = {
@@ -72,10 +69,7 @@ const mdComponents = {
   ),
   blockquote: ({ className, children, ...props }: MdComponentProps) => (
     <blockquote
-      className={cn(
-        "border-l-4 border-neutral-600 pl-4 italic my-3 text-sm",
-        className
-      )}
+      className={cn("border-l-4 border-neutral-600 pl-4 italic my-3 text-sm", className)}
       {...props}
     >
       {children}
@@ -83,10 +77,7 @@ const mdComponents = {
   ),
   code: ({ className, children, ...props }: MdComponentProps) => (
     <code
-      className={cn(
-        "bg-neutral-900 rounded px-1 py-0.5 font-mono text-xs",
-        className
-      )}
+      className={cn("bg-neutral-900 rounded px-1 py-0.5 font-mono text-xs", className)}
       {...props}
     >
       {children}
@@ -115,20 +106,14 @@ const mdComponents = {
   ),
   th: ({ className, children, ...props }: MdComponentProps) => (
     <th
-      className={cn(
-        "border border-neutral-600 px-3 py-2 text-left font-bold",
-        className
-      )}
+      className={cn("border border-neutral-600 px-3 py-2 text-left font-bold", className)}
       {...props}
     >
       {children}
     </th>
   ),
   td: ({ className, children, ...props }: MdComponentProps) => (
-    <td
-      className={cn("border border-neutral-600 px-3 py-2", className)}
-      {...props}
-    >
+    <td className={cn("border border-neutral-600 px-3 py-2", className)} {...props}>
       {children}
     </td>
   ),
@@ -141,18 +126,13 @@ interface HumanMessageBubbleProps {
 }
 
 // HumanMessageBubble Component
-const HumanMessageBubble: React.FC<HumanMessageBubbleProps> = ({
-  message,
-  mdComponents,
-}) => {
+const HumanMessageBubble: React.FC<HumanMessageBubbleProps> = ({ message, mdComponents }) => {
   return (
     <div
       className={`text-white rounded-3xl break-words min-h-7 bg-neutral-700 max-w-[100%] sm:max-w-[90%] px-4 pt-3 rounded-br-lg`}
     >
       <ReactMarkdown components={mdComponents}>
-        {typeof message.content === "string"
-          ? message.content
-          : JSON.stringify(message.content)}
+        {typeof message.content === "string" ? message.content : JSON.stringify(message.content)}
       </ReactMarkdown>
     </div>
   );
@@ -197,9 +177,7 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
         </div>
       )}
       <ReactMarkdown components={mdComponents}>
-        {typeof message.content === "string"
-          ? message.content
-          : JSON.stringify(message.content)}
+        {typeof message.content === "string" ? message.content : JSON.stringify(message.content)}
       </ReactMarkdown>
       <Button
         variant="default"
@@ -208,9 +186,7 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
         }`}
         onClick={() =>
           handleCopy(
-            typeof message.content === "string"
-              ? message.content
-              : JSON.stringify(message.content),
+            typeof message.content === "string" ? message.content : JSON.stringify(message.content),
             message.id!
           )
         }
@@ -226,7 +202,12 @@ interface ChatMessagesViewProps {
   messages: Message[];
   isLoading: boolean;
   scrollAreaRef: React.RefObject<HTMLDivElement | null>;
-  onSubmit: (inputValue: string, effort: string, model: string) => void;
+  onSubmit: (
+    inputValue: string,
+    effort: string,
+    queryModel: string,
+    reasoningModel: string
+  ) => void;
   onCancel: () => void;
   liveActivityEvents: ProcessedEvent[];
   historicalActivities: Record<string, ProcessedEvent[]>;
@@ -266,10 +247,7 @@ export function ChatMessagesView({
                   }`}
                 >
                   {message.type === "human" ? (
-                    <HumanMessageBubble
-                      message={message}
-                      mdComponents={mdComponents}
-                    />
+                    <HumanMessageBubble message={message} mdComponents={mdComponents} />
                   ) : (
                     <AiMessageBubble
                       message={message}
@@ -287,18 +265,14 @@ export function ChatMessagesView({
             );
           })}
           {isLoading &&
-            (messages.length === 0 ||
-              messages[messages.length - 1].type === "human") && (
+            (messages.length === 0 || messages[messages.length - 1].type === "human") && (
               <div className="flex items-start gap-3 mt-3">
                 {" "}
                 {/* AI message row structure */}
                 <div className="relative group max-w-[85%] md:max-w-[80%] rounded-xl p-3 shadow-sm break-words bg-neutral-800 text-neutral-100 rounded-bl-none w-full min-h-[56px]">
                   {liveActivityEvents.length > 0 ? (
                     <div className="text-xs">
-                      <ActivityTimeline
-                        processedEvents={liveActivityEvents}
-                        isLoading={true}
-                      />
+                      <ActivityTimeline processedEvents={liveActivityEvents} isLoading={true} />
                     </div>
                   ) : (
                     <div className="flex items-center justify-start h-full">

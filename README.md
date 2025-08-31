@@ -16,10 +16,11 @@ This project demonstrates a fullstack application using a React frontend and a L
 
 ## Project Structure
 
-The project is divided into two main directories:
+The project is divided into main directories:
 
 -   `frontend/`: Contains the React application built with Vite.
 -   `backend/`: Contains the LangGraph/FastAPI application, including the research agent logic.
+-   `tests/`: Contains project-wide regression tests for model validation and configuration consistency.
 
 ## Getting Started: Development and Local Testing
 
@@ -84,6 +85,25 @@ cd backend
 python examples/cli_research.py "What are the latest trends in renewable energy?"
 ```
 
+## Testing
+
+Run comprehensive model validation tests to ensure frontend/backend model consistency:
+
+```bash
+./tests/test-model-validation.sh
+```
+
+These regression tests prevent model configuration mismatches that can cause 404 errors and application crashes. See `tests/README.md` for detailed testing documentation.
+
+### Pre-commit Hooks
+
+Set up automated code quality checks that run before each commit:
+
+```bash
+./setup-precommit.sh
+```
+
+This configures hooks for model validation, Python linting (Ruff), frontend formatting (Prettier), and TypeScript checking.
 
 ## Deployment
 
@@ -117,4 +137,4 @@ Open your browser and navigate to `http://localhost:8123/app/` to see the applic
 
 ## License
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details. 
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
