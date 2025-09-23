@@ -2,19 +2,25 @@
 
 help:
 	@echo "Available commands:"
-	@echo "  make dev-frontend    - Starts the frontend development server (Vite)"
-	@echo "  make dev-backend     - Starts the backend development server (Uvicorn with reload)"
-	@echo "  make dev             - Starts both frontend and backend development servers"
+	@echo "  make dev-frontend     - Starts frontend dev server (Vite)"
+	@echo "  make dev-backend      - Starts backend dev server (LangGraph/FastAPI)"
+	@echo "  make dev              - Starts both servers concurrently"
 
 dev-frontend:
-	@echo "Starting frontend development server..."
-	@cd frontend && npm run dev
+	cd frontend && npm run dev
 
 dev-backend:
-	@echo "Starting backend development server..."
-	@cd backend && langgraph dev
+	cd backend && langgraph dev
 
-# Run frontend and backend concurrently
+# Runs both processes in parallel; both stop on Ctrl+C (POSIX systems)
 dev:
-	@echo "Starting both frontend and backend development servers..."
-	@make dev-frontend & make dev-backend 
+	@echo "Starting both frontend and backend dev servers..."
+	@$(MAKE) dev-frontend &
+	@frontend_pid=$$!; \
+	$(MAKE) dev-backend; \
+	wait $$frontend_pid
+
+# Optional: If you use npm 'concurrently', this is cross-platform
+dev-concurrent:
+	cd frontend && npm install --no-save concurrently
+	npx concurrently "cd frontend && npm run dev" "cd backend && langgraph dev"
