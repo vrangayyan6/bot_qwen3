@@ -1,5 +1,7 @@
 import argparse
+
 from langchain_core.messages import HumanMessage
+
 from agent.graph import graph
 
 
@@ -21,7 +23,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--reasoning-model",
-        default="gemini-2.5-pro-preview-05-06",
+        default="gemini-2.5-pro",
         help="Model for the final answer",
     )
     args = parser.parse_args()
