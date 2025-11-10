@@ -26,7 +26,7 @@ export const InputForm: React.FC<InputFormProps> = ({
 }) => {
   const [internalInputValue, setInternalInputValue] = useState("");
   const [effort, setEffort] = useState("medium");
-  const [model, setModel] = useState("gemini-2.0-flash");
+  const [model, setModel] = useState("gemini-2.5-flash");
 
   const handleInternalSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -36,12 +36,15 @@ export const InputForm: React.FC<InputFormProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Submit with Enter, new line with Shift+Enter
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleInternalSubmit();
+    // Submit on Enter; use Shift+Enter for a newline.
+    if (e.key !== "Enter") {
+      return;
     }
-    // Shift+Enter will allow a new line (default behavior)
+    if (e.shiftKey) {
+      return;
+    }
+    e.preventDefault();
+    handleInternalSubmit();
   };
 
   const isSubmitDisabled = !internalInputValue.trim() || isLoading;
@@ -157,7 +160,7 @@ export const InputForm: React.FC<InputFormProps> = ({
                   className="hover:bg-neutral-600 focus:bg-neutral-600 cursor-pointer"
                 >
                   <div className="flex items-center">
-                    <Cpu className="h-4 w-4 mr-2 text-blue-400" /> 2.5 Pro
+                    <Cpu className="h-4 w-4 mr-2 text-purple-400" /> 2.5 Pro
                   </div>
                 </SelectItem>
               </SelectContent>
