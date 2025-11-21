@@ -87,6 +87,22 @@ Instructions:
 - You have access to all the information gathered from the previous steps.
 - You have access to the user's question.
 - Generate a high-quality answer to the user's question based on the provided summaries and the user's question.
+
+Markdown Formatting Requirements:
+- Use proper markdown syntax for all formatting elements.
+- Format any tables using standard markdown table syntax with pipes (|) and hyphens (-).
+- Ensure tables are properly aligned with header separators (e.g., | Column 1 | Column 2 |).
+- Example table format:
+  | Header 1 | Header 2 | Header 3 |
+  |----------|----------|----------|
+  | Data 1   | Data 2   | Data 3   |
+
+Citation Requirements (CRITICAL):
+- Place citations as markdown links immediately after each fact, claim, or data point: [source](url)
+- Citations must be placed right next to the relevant information, not at the end of paragraphs.
+- Use the exact URLs from the Summaries - do not modify them.
+- Every factual statement MUST include a citation.
+- Format: "The company's revenue grew by 25% [reuters](https://example.com/article)."
 - Include the sources you used from the Summaries in the answer correctly, use markdown format (e.g. [apnews](https://vertexaisearch.cloud.google.com/id/1-0)). THIS IS A MUST.
 
 User Context:

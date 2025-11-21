@@ -4,7 +4,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Copy, CopyCheck } from "lucide-react";
 import { InputForm } from "@/components/InputForm";
 import { Button } from "@/components/ui/button";
-import { useState, ReactNode } from "react";
+import { useState, ReactNode, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,40 @@ import {
   ActivityTimeline,
   ProcessedEvent,
 } from "@/components/ActivityTimeline"; // Assuming ActivityTimeline is in the same dir or adjust path
+
+const Star = ({ delay }: { delay: number }) => (
+  <div
+    className="absolute w-1 h-1 bg-white rounded-full opacity-70 animate-fall"
+    style={{
+      left: `${Math.random() * 100}%`,
+      animationDelay: `${delay}s`,
+      animationDuration: `${3 + Math.random() * 4}s`,
+    }}
+  />
+);
+
+const ShootingStar = ({ delay }: { delay: number }) => (
+  <div
+    className="absolute w-0 h-0 border-l-[0px] border-l-transparent border-r-[2px] border-r-white transform rotate-[-45deg] opacity-0 animate-shoot"
+    style={{
+      top: `${Math.random() * 20}%`,
+      left: "100%",
+      animationDelay: `${delay}s`,
+      animationDuration: `${1 + Math.random() * 2}s`,
+    }}
+  />
+);
+
+const Sunray = ({ delay, angle }: { delay: number; angle: number }) => (
+  <div
+    className="absolute top-0 left-1/2 w-[2px] h-full origin-top opacity-0 animate-sunray"
+    style={{
+      background: 'linear-gradient(to bottom, rgba(255, 220, 150, 0.4), transparent)',
+      transform: `rotate(${angle}deg)`,
+      animationDelay: `${delay}s`,
+    }}
+  />
+);
 
 // Markdown component props type from former ReportView
 type MdComponentProps = {
@@ -38,7 +72,7 @@ const mdComponents = {
     </h3>
   ),
   p: ({ className, children, ...props }: MdComponentProps) => (
-    <p className={cn("mb-3 leading-7", className)} {...props}>
+    <p className={cn("mb-3 leading-7 break-words", className)} style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }} {...props}>
       {children}
     </p>
   ),
@@ -147,7 +181,8 @@ const HumanMessageBubble: React.FC<HumanMessageBubbleProps> = ({
 }) => {
   return (
     <div
-      className={`text-white rounded-3xl break-words min-h-7 bg-neutral-700 max-w-[100%] sm:max-w-[90%] px-4 pt-3 rounded-br-lg`}
+      className={`text-white rounded-3xl break-words word-wrap min-h-7 bg-neutral-700 max-w-[95%] px-4 pt-3 rounded-br-lg overflow-wrap-anywhere`}
+      style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}
     >
       <ReactMarkdown components={mdComponents}>
         {typeof message.content === "string"
@@ -187,7 +222,7 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
   const isLiveActivityForThisBubble = isLastMessage && isOverallLoading;
 
   return (
-    <div className={`relative break-words flex flex-col`}>
+    <div className={`relative break-words flex flex-col overflow-wrap-anywhere`} style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}>
       {activityForThisBubble && activityForThisBubble.length > 0 && (
         <div className="mb-3 border-b border-neutral-700 pb-3 text-xs">
           <ActivityTimeline
@@ -242,6 +277,18 @@ export function ChatMessagesView({
   historicalActivities,
 }: ChatMessagesViewProps) {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [stars, setStars] = useState<number[]>([]);
+
+  useEffect(() => {
+    // Generate 50 random stars for background twinkling/falling
+    const starDelays = Array.from({ length: 50 }, (_, i) => i * 0.1);
+    setStars(starDelays);
+  }, []);
+
+  const sunrays = Array.from({ length: 12 }, (_, i) => ({
+    angle: (i * 30) - 165,
+    delay: i * 0.5,
+  }));
 
   const handleCopy = async (text: string, messageId: string) => {
     try {
@@ -253,9 +300,49 @@ export function ChatMessagesView({
     }
   };
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 overflow-y-auto" ref={scrollAreaRef}>
-        <div className="p-4 md:p-6 space-y-2 max-w-4xl mx-auto pt-16">
+    <div className="flex flex-col h-full relative overflow-hidden">
+      {/* Space Background with Darker Nebula Gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-black via-indigo-950/30 to-slate-900/40 pointer-events-none">
+        {/* Twinkling Stars */}
+        {stars.map((delay, i) => (
+          <div
+            key={`twinkle-${i}`}
+            className="absolute w-[2px] h-[2px] bg-white rounded-full opacity-40 animate-twinkle"
+            style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${delay}s`,
+            }}
+          />
+        ))}
+        
+        {/* Falling Stars */}
+        {stars.slice(0, 20).map((delay, i) => (
+          <Star key={`fall-${i}`} delay={delay} />
+        ))}
+        
+        {/* Shooting Stars */}
+        {stars.slice(0, 5).map((delay, i) => (
+          <ShootingStar key={`shoot-${i}`} delay={delay * 2} />
+        ))}
+        
+        {/* Sunrays */}
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+          {sunrays.map((ray, i) => (
+            <Sunray key={`sunray-${i}`} delay={ray.delay} angle={ray.angle} />
+          ))}
+        </div>
+        
+        {/* Subtle Solar System Orb - Central Glow */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-32 h-32 bg-gradient-to-r from-amber-400/15 via-orange-400/10 to-yellow-500/15 rounded-full blur-xl animate-pulse-slow opacity-25" />
+        </div>
+        
+        {/* Orbiting Planet (subtle) */}
+        <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-gradient-to-r from-blue-400/40 to-indigo-500/40 rounded-full animate-orbit opacity-50" />
+      </div>
+      <ScrollArea className="flex-1 overflow-y-auto relative z-10" ref={scrollAreaRef}>
+        <div className="p-4 md:p-6 space-y-2 max-w-full mx-auto pt-16 px-4 md:px-8 lg:px-12">
           {messages.map((message, index) => {
             const isLast = index === messages.length - 1;
             return (
@@ -292,7 +379,7 @@ export function ChatMessagesView({
               <div className="flex items-start gap-3 mt-3">
                 {" "}
                 {/* AI message row structure */}
-                <div className="relative group max-w-[85%] md:max-w-[80%] rounded-xl p-3 shadow-sm break-words bg-neutral-800 text-neutral-100 rounded-bl-none w-full min-h-[56px]">
+                <div className="relative group max-w-[95%] rounded-xl p-3 shadow-sm break-words bg-neutral-800 text-neutral-100 rounded-bl-none w-full min-h-[56px]" style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}>
                   {liveActivityEvents.length > 0 ? (
                     <div className="text-xs">
                       <ActivityTimeline
@@ -311,12 +398,92 @@ export function ChatMessagesView({
             )}
         </div>
       </ScrollArea>
-      <InputForm
-        onSubmit={onSubmit}
-        isLoading={isLoading}
-        onCancel={onCancel}
-        hasHistory={messages.length > 0}
-      />
+      <div className="relative z-10">
+        <InputForm
+          onSubmit={onSubmit}
+          isLoading={isLoading}
+          onCancel={onCancel}
+          hasHistory={messages.length > 0}
+        />
+      </div>
+
+      <style>{`
+        @keyframes fall {
+          0% {
+            transform: translateY(-100vh) rotate(0deg);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(100vh) rotate(360deg);
+            opacity: 0;
+          }
+        }
+        @keyframes shoot {
+          0% {
+            opacity: 0;
+            transform: translateX(-100vw) translateY(0);
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-200vw) translateY(-50vh);
+          }
+        }
+        @keyframes twinkle {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.2); }
+        }
+        @keyframes orbit {
+          0% { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+          100% { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+        }
+        @keyframes pulse-slow {
+          0%, 100% { opacity: 0.3; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.1); }
+        }
+        @keyframes sunray {
+          0% {
+            opacity: 0;
+            height: 0;
+          }
+          20% {
+            opacity: 0.3;
+            height: 50%;
+          }
+          40% {
+            opacity: 0.5;
+            height: 100%;
+          }
+          60% {
+            opacity: 0.3;
+            height: 100%;
+          }
+          100% {
+            opacity: 0;
+            height: 100%;
+          }
+        }
+        .animate-fall {
+          animation: fall linear infinite;
+        }
+        .animate-shoot {
+          animation: shoot linear infinite;
+        }
+        .animate-twinkle {
+          animation: twinkle 2s ease-in-out infinite;
+        }
+        .animate-orbit {
+          animation: orbit 20s linear infinite;
+        }
+        .animate-pulse-slow {
+          animation: pulse-slow 4s ease-in-out infinite;
+        }
+        .animate-sunray {
+          animation: sunray 8s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

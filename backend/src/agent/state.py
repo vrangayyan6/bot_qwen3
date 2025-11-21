@@ -19,6 +19,7 @@ class OverallState(TypedDict):
     max_research_loops: int
     research_loop_count: int
     reasoning_model: str
+    conversation_id: str  # Track which conversation this state belongs to
 
 
 class ReflectionState(TypedDict):

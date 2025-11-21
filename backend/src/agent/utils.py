@@ -2,6 +2,31 @@ from typing import Any, Dict, List
 from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
 
 
+def load_conversation_history(conversation_id: str) -> List[AnyMessage]:
+    """
+    Load conversation history from database and convert to LangChain messages.
+    
+    Args:
+        conversation_id: The ID of the conversation to load
+        
+    Returns:
+        List of LangChain messages (HumanMessage or AIMessage)
+    """
+    from agent.database import ConversationDatabase
+    
+    db = ConversationDatabase()
+    messages_data = db.get_messages(conversation_id)
+    
+    langchain_messages = []
+    for msg in messages_data:
+        if msg["role"] == "human":
+            langchain_messages.append(HumanMessage(content=msg["content"]))
+        elif msg["role"] == "ai":
+            langchain_messages.append(AIMessage(content=msg["content"]))
+    
+    return langchain_messages
+
+
 def get_research_topic(messages: List[AnyMessage]) -> str:
     """
     Get the research topic from the messages.
