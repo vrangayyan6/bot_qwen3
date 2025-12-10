@@ -1,6 +1,6 @@
 [project]
 name = "agent"
-version = "0.0.1"
+version = "0.0.2"
 description = "Backend for the LangGraph agent"
 authors = [
     { name = "Philipp Schmid", email = "schmidphilipp1995@gmail.com" },
