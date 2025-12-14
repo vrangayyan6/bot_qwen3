@@ -11,7 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   ActivityTimeline,
   ProcessedEvent,
-} from "@/components/ActivityTimeline"; // Assuming ActivityTimeline is in the same dir or adjust path
+} from "@/components/ActivityTimeline";
+import {
+  TokenUsageDisplay,
+  TokenUsageRecord,
+} from "@/components/TokenUsageDisplay";
 
 // Markdown component props type from former ReportView
 type MdComponentProps = {
@@ -163,6 +167,8 @@ interface AiMessageBubbleProps {
   message: Message;
   historicalActivity: ProcessedEvent[] | undefined;
   liveActivity: ProcessedEvent[] | undefined;
+  historicalTokenUsage: TokenUsageRecord[] | undefined;
+  liveTokenUsage: TokenUsageRecord[] | undefined;
   isLastMessage: boolean;
   isOverallLoading: boolean;
   mdComponents: typeof mdComponents;
@@ -175,6 +181,8 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
   message,
   historicalActivity,
   liveActivity,
+  historicalTokenUsage,
+  liveTokenUsage,
   isLastMessage,
   isOverallLoading,
   mdComponents,
@@ -185,6 +193,10 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
   const activityForThisBubble =
     isLastMessage && isOverallLoading ? liveActivity : historicalActivity;
   const isLiveActivityForThisBubble = isLastMessage && isOverallLoading;
+  
+  const tokenUsageForThisBubble =
+    isLastMessage && isOverallLoading ? liveTokenUsage : historicalTokenUsage;
+  const isLiveTokenUsageForThisBubble = isLastMessage && isOverallLoading;
 
   return (
     <div className={`relative break-words flex flex-col`}>
@@ -193,6 +205,14 @@ const AiMessageBubble: React.FC<AiMessageBubbleProps> = ({
           <ActivityTimeline
             processedEvents={activityForThisBubble}
             isLoading={isLiveActivityForThisBubble}
+          />
+        </div>
+      )}
+      {tokenUsageForThisBubble && tokenUsageForThisBubble.length > 0 && (
+        <div className="mb-3 border-b border-neutral-700 pb-3 text-xs">
+          <TokenUsageDisplay
+            tokenRecords={tokenUsageForThisBubble}
+            isLoading={isLiveTokenUsageForThisBubble}
           />
         </div>
       )}
@@ -230,6 +250,8 @@ interface ChatMessagesViewProps {
   onCancel: () => void;
   liveActivityEvents: ProcessedEvent[];
   historicalActivities: Record<string, ProcessedEvent[]>;
+  liveTokenUsage: TokenUsageRecord[];
+  historicalTokenUsage: Record<string, TokenUsageRecord[]>;
 }
 
 export function ChatMessagesView({
@@ -240,6 +262,8 @@ export function ChatMessagesView({
   onCancel,
   liveActivityEvents,
   historicalActivities,
+  liveTokenUsage,
+  historicalTokenUsage,
 }: ChatMessagesViewProps) {
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
@@ -275,6 +299,8 @@ export function ChatMessagesView({
                       message={message}
                       historicalActivity={historicalActivities[message.id!]}
                       liveActivity={liveActivityEvents} // Pass global live events
+                      historicalTokenUsage={historicalTokenUsage[message.id!]}
+                      liveTokenUsage={liveTokenUsage} // Pass global live token usage
                       isLastMessage={isLast}
                       isOverallLoading={isLoading} // Pass global loading state
                       mdComponents={mdComponents}
@@ -294,11 +320,17 @@ export function ChatMessagesView({
                 {/* AI message row structure */}
                 <div className="relative group max-w-[85%] md:max-w-[80%] rounded-xl p-3 shadow-sm break-words bg-neutral-800 text-neutral-100 rounded-bl-none w-full min-h-[56px]">
                   {liveActivityEvents.length > 0 ? (
-                    <div className="text-xs">
+                    <div className="text-xs space-y-2">
                       <ActivityTimeline
                         processedEvents={liveActivityEvents}
                         isLoading={true}
                       />
+                      {liveTokenUsage.length > 0 && (
+                        <TokenUsageDisplay
+                          tokenRecords={liveTokenUsage}
+                          isLoading={true}
+                        />
+                      )}
                     </div>
                   ) : (
                     <div className="flex items-center justify-start h-full">

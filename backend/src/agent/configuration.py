@@ -39,6 +39,13 @@ class Configuration(BaseModel):
         metadata={"description": "The maximum number of research loops to perform."},
     )
 
+    track_token_usage: bool = Field(
+        default=True,
+        metadata={
+            "description": "Enable token usage tracking for cost monitoring and optimization."
+        },
+    )
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None

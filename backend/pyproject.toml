@@ -28,6 +28,14 @@ dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
 requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# Configure setuptools to find packages in src/ directory to avoid import conflicts with site-packages
+# Fixes: ImportError: cannot import name 'extract_token_usage_from_langchain' from 'agent.utils'
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.ruff]
 lint.select = [
     "E",    # pycodestyle

@@ -10,11 +10,21 @@ from typing_extensions import Annotated
 import operator
 
 
+class TokenUsageRecord(TypedDict):
+    """Record of token usage for a single node execution."""
+
+    node_name: str
+    input_tokens: int
+    output_tokens: int
+    model: str
+
+
 class OverallState(TypedDict):
     messages: Annotated[list, add_messages]
     search_query: Annotated[list, operator.add]
     web_research_result: Annotated[list, operator.add]
     sources_gathered: Annotated[list, operator.add]
+    token_usage_records: Annotated[list, operator.add]
     initial_search_query_count: int
     max_research_loops: int
     research_loop_count: int

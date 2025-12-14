@@ -37,6 +37,29 @@ def main() -> None:
     messages = result.get("messages", [])
     if messages:
         print(messages[-1].content)
+    
+    token_records = result.get("token_usage_records", [])
+    if token_records:
+        print("\n" + "=" * 80)
+        print("TOKEN USAGE SUMMARY")
+        print("=" * 80)
+        
+        total_input = 0
+        total_output = 0
+        
+        for record in token_records:
+            print(f"\n{record['node_name'].upper():<20} ({record['model']})")
+            print(f"  Input tokens:  {record['input_tokens']:,}")
+            print(f"  Output tokens: {record['output_tokens']:,}")
+            total_input += record['input_tokens']
+            total_output += record['output_tokens']
+        
+        print("\n" + "-" * 80)
+        print(f"{'TOTAL':<20}")
+        print(f"  Input tokens:  {total_input:,}")
+        print(f"  Output tokens: {total_output:,}")
+        print(f"  Total tokens:  {(total_input + total_output):,}")
+        print("=" * 80)
 
 
 if __name__ == "__main__":

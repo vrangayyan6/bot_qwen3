@@ -29,6 +29,7 @@ from agent.utils import (
     get_research_topic,
     insert_citation_markers,
     resolve_urls,
+    create_token_usage_record,
 )
 
 load_dotenv()
@@ -78,7 +79,14 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     )
     # Generate the search queries
     result = structured_llm.invoke(formatted_prompt)
-    return {"search_query": result.query}
+    
+    update = {"search_query": result.query}
+    if configurable.track_token_usage:
+        update["token_usage_records"] = create_token_usage_record(
+            result, "generate_query", configurable.query_generator_model, is_langchain=True
+        )
+    
+    return update
 
 
 def continue_to_web_research(state: QueryGenerationState):
@@ -129,11 +137,18 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     modified_text = insert_citation_markers(response.text, citations)
     sources_gathered = [item for citation in citations for item in citation["segments"]]
 
-    return {
+    update = {
         "sources_gathered": sources_gathered,
         "search_query": [state["search_query"]],
         "web_research_result": [modified_text],
     }
+    
+    if configurable.track_token_usage:
+        update["token_usage_records"] = create_token_usage_record(
+            response, "web_research", configurable.query_generator_model, is_langchain=False
+        )
+    
+    return update
 
 
 def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
@@ -171,13 +186,20 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     )
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
-    return {
+    update = {
         "is_sufficient": result.is_sufficient,
         "knowledge_gap": result.knowledge_gap,
         "follow_up_queries": result.follow_up_queries,
         "research_loop_count": state["research_loop_count"],
         "number_of_ran_queries": len(state["search_query"]),
     }
+    
+    if configurable.track_token_usage:
+        update["token_usage_records"] = create_token_usage_record(
+            result, "reflection", reasoning_model, is_langchain=True
+        )
+    
+    return update
 
 
 def evaluate_research(
@@ -259,10 +281,17 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
             )
             unique_sources.append(source)
 
-    return {
+    update = {
         "messages": [AIMessage(content=result.content)],
         "sources_gathered": unique_sources,
     }
+    
+    if configurable.track_token_usage:
+        update["token_usage_records"] = create_token_usage_record(
+            result, "finalize_answer", reasoning_model, is_langchain=True
+        )
+    
+    return update
 
 
 # Create our Agent Graph
