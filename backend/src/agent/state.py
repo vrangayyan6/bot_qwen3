@@ -12,9 +12,17 @@ import operator
 
 class OverallState(TypedDict):
     messages: Annotated[list, add_messages]
+    task_queue: list # รายการงานย่อยที่ต้องทำต่อกัน
+    current_step_index: int
+    current_worker: str
+    last_output: str # ผลลัพธ์จากขั้นตอนล่าสุดเพื่อส่งต่อ
+    verification_passed: bool
+    error_feedback: str # คอมเมนต์จาก Verifier ถ้างานผิดพลาด
     search_query: Annotated[list, operator.add]
     web_research_result: Annotated[list, operator.add]
     sources_gathered: Annotated[list, operator.add]
+    extracted_data: dict 
+    code_snippet: str 
     initial_search_query_count: int
     max_research_loops: int
     research_loop_count: int
