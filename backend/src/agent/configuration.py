@@ -16,14 +16,14 @@ class Configuration(BaseModel):
     )
 
     reflection_model: str = Field(
-        default="gemini-2.5-flash",
+        default="llama-3.3-70b-versatile",
         metadata={
             "description": "The name of the language model to use for the agent's reflection."
         },
     )
 
     answer_model: str = Field(
-        default="gemini-2.5-pro",
+        default="llama-3.3-70b-versatile",
         metadata={
             "description": "The name of the language model to use for the agent's answer."
         },
