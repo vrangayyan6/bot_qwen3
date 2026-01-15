@@ -1,5 +1,5 @@
 import os
-
+import pathlib
 from agent.tools_and_schemas import SearchQueryList, Reflection
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
@@ -7,7 +7,6 @@ from langgraph.types import Send
 from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from langchain_core.runnables import RunnableConfig
-from google.genai import Client
 
 from agent.state import (
     OverallState,
@@ -33,21 +32,12 @@ from agent.utils import (
 )
 
 load_dotenv()
-
-if os.getenv("GEMINI_API_KEY") is None:
-    raise ValueError("GEMINI_API_KEY is not set")
 if os.getenv("GROQ_API_KEY") is None:
     raise ValueError("GROQ_API_KEY is not set")
-
-genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
-
 
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
     """LangGraph node that generates search queries based on the User's question.
-
-    Uses Gemini 2.0 Flash to create an optimized search queries for web research based on
-    the User's question.
 
     Args:
         state: Current graph state containing the User's question
@@ -106,31 +96,33 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     """
     # Configure
     configurable = Configuration.from_runnable_config(config)
-    formatted_prompt = web_searcher_instructions.format(
-        current_date=get_current_date(),
-        research_topic=state["search_query"],
-    )
-    response = genai_client.models.generate_content(
-            model="gemini-2.0-flash", 
-            contents=formatted_prompt,
-            config={
-                "tools": [{"google_search": {}}],
-                "temperature": 0,
-            },
-        )
-    # resolve the urls to short urls for saving tokens and time
-    resolved_urls = resolve_urls(
-        response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
-    )
-    # Gets the citations and adds them to the generated text
-    citations = get_citations(response, resolved_urls)
-    modified_text = insert_citation_markers(response.text, citations)
-    sources_gathered = [item for citation in citations for item in citation["segments"]]
+    target_path = pathlib.Path(configurable.local_dir)
+
+    all_docs_content = []
+    sources_metadata = []
+
+    if target_path.exists() and target_path.is_dir():
+        for idx, file_path in enumerate(target_path.rglob("*.md")):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                    
+                    all_docs_content.append(f"FILE: {file_path.name}\nCONTENT:\n{content}")
+                    
+                    sources_metadata.append({
+                        "short_url": f"file_{idx}",
+                        "value": str(file_path),
+                        "segments": [{"text": content[:150] + "..."}]
+                    })
+            except Exception as e:
+                print(f"Error reading {file_path}: {e}")
+
+    final_context = "\n\n---\n\n".join(all_docs_content) if all_docs_content else "No local files found."
 
     return {
-        "sources_gathered": sources_gathered,
+        "sources_gathered": sources_metadata,
         "search_query": [state["search_query"]],
-        "web_research_result": [modified_text],
+        "web_research_result": [final_context],
     }
 
 

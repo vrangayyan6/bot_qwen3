@@ -7,6 +7,9 @@ def main() -> None:
     """Run the research agent from the command line."""
     parser = argparse.ArgumentParser(description="Run the LangGraph research agent")
     parser.add_argument("question", help="Research question")
+
+    parser.add_argument("--dir", default="./docs", help="Directory with local files")
+
     parser.add_argument(
         "--initial-queries",
         type=int,
@@ -33,7 +36,9 @@ def main() -> None:
         "reasoning_model": args.reasoning_model,
     }
 
-    result = graph.invoke(state)
+    config = {"configurable": {"local_dir": args.dir}}
+
+    result = graph.invoke(state, config=config)
     messages = result.get("messages", [])
     if messages:
         print(messages[-1].content)

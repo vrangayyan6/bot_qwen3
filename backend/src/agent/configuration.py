@@ -8,6 +8,8 @@ from langchain_core.runnables import RunnableConfig
 class Configuration(BaseModel):
     """The configuration for the agent."""
 
+    local_dir: str = "./docs"
+    
     query_generator_model: str = Field(
         default="gemini-2.0-flash",
         metadata={
