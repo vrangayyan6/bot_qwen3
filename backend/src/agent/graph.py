@@ -23,7 +23,8 @@ from agent.prompts import (
     reflection_instructions,
     answer_instructions,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
+
 from agent.utils import (
     get_citations,
     get_research_topic,
@@ -35,8 +36,9 @@ load_dotenv()
 
 if os.getenv("GEMINI_API_KEY") is None:
     raise ValueError("GEMINI_API_KEY is not set")
+if os.getenv("GROQ_API_KEY") is None:
+    raise ValueError("GROQ_API_KEY is not set")
 
-# Used for Google Search API
 genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
@@ -60,13 +62,11 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if state.get("initial_search_query_count") is None:
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
-    # init Gemini 2.0 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=configurable.query_generator_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        temperature=0,
     )
+
     structured_llm = llm.with_structured_output(SearchQueryList)
 
     # Format the prompt
@@ -110,16 +110,14 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         current_date=get_current_date(),
         research_topic=state["search_query"],
     )
-
-    # Uses the google genai client as the langchain client doesn't return grounding metadata
     response = genai_client.models.generate_content(
-        model=configurable.query_generator_model,
-        contents=formatted_prompt,
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-        },
-    )
+            model="gemini-2.0-flash", 
+            contents=formatted_prompt,
+            config={
+                "tools": [{"google_search": {}}],
+                "temperature": 0,
+            },
+        )
     # resolve the urls to short urls for saving tokens and time
     resolved_urls = resolve_urls(
         response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
@@ -162,13 +160,11 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         research_topic=get_research_topic(state["messages"]),
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
-    # init Reasoning Model
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
-        temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
-    )
+
+    llm = ChatGroq(
+            model="llama-3.3-70b-versatile",
+            temperature=0,
+        )
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
     return {
@@ -241,12 +237,9 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         summaries="\n---\n\n".join(state["web_research_result"]),
     )
 
-    # init Reasoning Model, default to Gemini 2.5 Flash
-    llm = ChatGoogleGenerativeAI(
-        model=reasoning_model,
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
         temperature=0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
     )
     result = llm.invoke(formatted_prompt)
 
