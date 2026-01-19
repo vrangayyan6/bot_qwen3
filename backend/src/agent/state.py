@@ -15,6 +15,7 @@ class OverallState(TypedDict):
     search_query: Annotated[list, operator.add]
     web_research_result: Annotated[list, operator.add]
     sources_gathered: Annotated[list, operator.add]
+    docs_dir: str
     initial_search_query_count: int
     max_research_loops: int
     research_loop_count: int
@@ -35,12 +36,14 @@ class Query(TypedDict):
 
 
 class QueryGenerationState(TypedDict):
-    search_query: list[Query]
+    search_query: list[str]
+    docs_dir: str
 
 
 class WebSearchState(TypedDict):
     search_query: str
-    id: str
+    id: int
+    docs_dir: str
 
 
 @dataclass(kw_only=True)
