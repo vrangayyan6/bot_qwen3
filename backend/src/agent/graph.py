@@ -8,6 +8,7 @@ from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from langchain_core.runnables import RunnableConfig
 from google.genai import Client
+from google.genai.errors import ClientError
 
 from agent.state import (
     OverallState,
@@ -23,7 +24,7 @@ from agent.prompts import (
     reflection_instructions,
     answer_instructions,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from agent.utils import (
     get_citations,
     get_research_topic,
@@ -36,6 +37,9 @@ load_dotenv()
 if os.getenv("GEMINI_API_KEY") is None:
     raise ValueError("GEMINI_API_KEY is not set")
 
+if os.getenv("GROQ_API_KEY") is None:
+    raise ValueError("GROQ_API_KEY is not set")
+
 # Used for Google Search API
 genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -44,8 +48,8 @@ genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
     """LangGraph node that generates search queries based on the User's question.
 
-    Uses Gemini 2.0 Flash to create an optimized search queries for web research based on
-    the User's question.
+    Uses Groq (llama-3.3-70b-versatile) to create optimized search queries for web
+    research based on the User's question.
 
     Args:
         state: Current graph state containing the User's question
@@ -60,16 +64,15 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if state.get("initial_search_query_count") is None:
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
-    # init Gemini 2.0 Flash
-    llm = ChatGoogleGenerativeAI(
+    # init Groq LLM
+    llm = ChatGroq(
         model=configurable.query_generator_model,
         temperature=1.0,
         max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        api_key=os.getenv("GROQ_API_KEY"),
     )
     structured_llm = llm.with_structured_output(SearchQueryList)
 
-    # Format the prompt
     current_date = get_current_date()
     formatted_prompt = query_writer_instructions.format(
         current_date=current_date,
@@ -95,7 +98,7 @@ def continue_to_web_research(state: QueryGenerationState):
 def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     """LangGraph node that performs web research using the native Google Search API tool.
 
-    Executes a web search using the native Google Search API tool in combination with Gemini 2.0 Flash.
+    Executes a web search using the native Google Search API tool.
 
     Args:
         state: Current graph state containing the search query and research loop count
@@ -104,34 +107,56 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     Returns:
         Dictionary with state update, including sources_gathered, research_loop_count, and web_research_results
     """
-    # Configure
     configurable = Configuration.from_runnable_config(config)
     formatted_prompt = web_searcher_instructions.format(
         current_date=get_current_date(),
         research_topic=state["search_query"],
     )
 
-    # Uses the google genai client as the langchain client doesn't return grounding metadata
-    response = genai_client.models.generate_content(
-        model=configurable.query_generator_model,
-        contents=formatted_prompt,
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-        },
+    try:
+        response = genai_client.models.generate_content(
+            model=configurable.web_search_model,
+            contents=formatted_prompt,
+            config={
+                "tools": [{"google_search": {}}],
+                "temperature": 0,
+            },
+        )
+    except ClientError as e:
+        if getattr(e, 'status_code', None) == 429 or (
+            "RESOURCE_EXHAUSTED" in str(e)
+        ):
+            return {
+                "sources_gathered": [],
+                "web_research_result": [
+                    "Web search skipped: Google Search API quota exceeded (RESOURCE_EXHAUSTED)."
+                ],
+            }
+        else:
+            raise
+    # If the response does not contain grounding metadata, fall back to plain text
+    candidates = getattr(response, "candidates", None) or []
+    grounding_metadata = (
+        getattr(candidates[0], "grounding_metadata", None) if candidates else None
     )
-    # resolve the urls to short urls for saving tokens and time
-    resolved_urls = resolve_urls(
-        response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
-    )
-    # Gets the citations and adds them to the generated text
-    citations = get_citations(response, resolved_urls)
-    modified_text = insert_citation_markers(response.text, citations)
-    sources_gathered = [item for citation in citations for item in citation["segments"]]
+    if not grounding_metadata or not getattr(grounding_metadata, "grounding_chunks", None):
+        modified_text = getattr(response, "text", str(response))
+        sources_gathered = []
+    else:
+        # resolve the urls to short urls for saving tokens and time
+        resolved_urls = resolve_urls(
+            grounding_metadata.grounding_chunks,
+            state["id"],
+        )
+        # Gets the citations and adds them to the generated text
+        citations = get_citations(response, resolved_urls)
+        modified_text = insert_citation_markers(response.text, citations)
+        sources_gathered = [
+            item for citation in citations for item in citation["segments"]
+        ]
 
     return {
         "sources_gathered": sources_gathered,
-        "search_query": [state["search_query"]],
         "web_research_result": [modified_text],
     }
 
@@ -148,26 +173,24 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         config: Configuration for the runnable, including LLM provider settings
 
     Returns:
-        Dictionary with state update, including search_query key containing the generated follow-up query
+        Dictionary with state update including is_sufficient, knowledge_gap, follow_up_queries, research_loop_count, and number_of_ran_queries
     """
     configurable = Configuration.from_runnable_config(config)
     # Increment the research loop count and get the reasoning model
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
     reasoning_model = state.get("reasoning_model", configurable.reflection_model)
 
-    # Format the prompt
     current_date = get_current_date()
     formatted_prompt = reflection_instructions.format(
         current_date=current_date,
         research_topic=get_research_topic(state["messages"]),
-        summaries="\n\n---\n\n".join(state["web_research_result"]),
+            summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
-    # init Reasoning Model
-    llm = ChatGoogleGenerativeAI(
+    llm = ChatGroq(
         model=reasoning_model,
         temperature=1.0,
         max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        api_key=os.getenv("GROQ_API_KEY"),
     )
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
@@ -176,7 +199,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         "knowledge_gap": result.knowledge_gap,
         "follow_up_queries": result.follow_up_queries,
         "research_loop_count": state["research_loop_count"],
-        "number_of_ran_queries": len(state["search_query"]),
+        "number_of_ran_queries": len(state.get("search_query", [])),
     }
 
 
@@ -194,7 +217,7 @@ def evaluate_research(
         config: Configuration for the runnable, including max_research_loops setting
 
     Returns:
-        String literal indicating the next node to visit ("web_research" or "finalize_summary")
+        String "finalize_answer" or list of Send objects for "web_research" nodes
     """
     configurable = Configuration.from_runnable_config(config)
     max_research_loops = (
@@ -233,26 +256,36 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     configurable = Configuration.from_runnable_config(config)
     reasoning_model = state.get("reasoning_model") or configurable.answer_model
 
-    # Format the prompt
     current_date = get_current_date()
-    formatted_prompt = answer_instructions.format(
-        current_date=current_date,
-        research_topic=get_research_topic(state["messages"]),
-        summaries="\n---\n\n".join(state["web_research_result"]),
-    )
+    if any("Web search skipped" in r for r in state.get("web_research_result", [])):
+        # Fallback prompt: short, explicit about quota, forbids citations/links/outlets
+        formatted_prompt = (
+            "Web search was skipped due to quota limits.\n"
+            "Do NOT include any links, citations, markdown links, or name, suggest, or mention any sources or news outlets—including 'apnews', 'vertexaisearch', or any examples.\n"
+            "Do NOT recommend that the user check sources or news outlets.\n"
+            "\n"
+            "Based only on general knowledge, provide a brief best-effort answer to the following question:\n"
+            f"Question: {get_research_topic(state['messages'])}"
+        )
+    else:
+        # Normal prompt with citations if sources exist
+        formatted_prompt = answer_instructions.format(
+            current_date=current_date,
+            research_topic=get_research_topic(state["messages"]),
+            summaries="\n---\n\n".join(state["web_research_result"]),
+        )
 
-    # init Reasoning Model, default to Gemini 2.5 Flash
-    llm = ChatGoogleGenerativeAI(
+    llm = ChatGroq(
         model=reasoning_model,
         temperature=0,
         max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        api_key=os.getenv("GROQ_API_KEY"),
     )
     result = llm.invoke(formatted_prompt)
 
     # Replace the short urls with the original urls and add all used urls to the sources_gathered
     unique_sources = []
-    for source in state["sources_gathered"]:
+    for source in state.get("sources_gathered", []):
         if source["short_url"] in result.content:
             result.content = result.content.replace(
                 source["short_url"], source["value"]
