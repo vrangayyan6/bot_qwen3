@@ -8,6 +8,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run the LangGraph research agent")
     parser.add_argument("question", help="Research question")
     parser.add_argument(
+        "--dir",
+        required=True,
+        help="Path to a local directory containing .md files for the agent to reference",
+    )
+    parser.add_argument(
         "--initial-queries",
         type=int,
         default=3,
@@ -21,13 +26,14 @@ def main() -> None:
     )
     parser.add_argument(
         "--reasoning-model",
-        default="gemini-2.5-pro-preview-05-06",
+        default="llama-3.3-70b-versatile",
         help="Model for the final answer",
     )
     args = parser.parse_args()
 
     state = {
         "messages": [HumanMessage(content=args.question)],
+        "docs_dir": args.dir,
         "initial_search_query_count": args.initial_queries,
         "max_research_loops": args.max_loops,
         "reasoning_model": args.reasoning_model,
