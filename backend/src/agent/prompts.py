@@ -34,17 +34,17 @@ Topic: What revenue grew more last year apple stock or the number of people buyi
 Context: {research_topic}"""
 
 
-web_searcher_instructions = """Conduct targeted Google Searches to gather the most recent, credible information on "{research_topic}" and synthesize it into a verifiable text artifact.
+web_searcher_instructions = """Summarize the following search results for the topic "{research_topic}".
 
 Instructions:
-- Query should ensure that the most current information is gathered. The current date is {current_date}.
-- Conduct multiple, diverse searches to gather comprehensive information.
-- Consolidate key findings while meticulously tracking the source(s) for each specific piece of information.
-- The output should be a well-written summary or report based on your search findings. 
-- Only include the information found in the search results, don't make up any information.
+- The current date is {current_date}.
+- Synthesize the provided search results into a concise and informative summary.
+- You must cite the sources using the markdown format [Source Title](URL).
+- Do not make up information. Only use the provided search results.
+- If the search results are not relevant, state that.
 
-Research Topic:
-{research_topic}
+Search Results:
+{search_results}
 """
 
 reflection_instructions = """You are an expert research assistant analyzing summaries about "{research_topic}".
@@ -87,7 +87,7 @@ Instructions:
 - You have access to all the information gathered from the previous steps.
 - You have access to the user's question.
 - Generate a high-quality answer to the user's question based on the provided summaries and the user's question.
-- Include the sources you used from the Summaries in the answer correctly, use markdown format (e.g. [apnews](https://vertexaisearch.cloud.google.com/id/1-0)). THIS IS A MUST.
+- Include the sources you used from the Summaries in the answer correctly, use markdown format [Source Title](URL). THIS IS A MUST.
 
 User Context:
 - {research_topic}

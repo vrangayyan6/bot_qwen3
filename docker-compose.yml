@@ -38,7 +38,9 @@ services:
       langgraph-postgres:
         condition: service_healthy
     environment:
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
       REDIS_URI: redis://langgraph-redis:6379
       POSTGRES_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable

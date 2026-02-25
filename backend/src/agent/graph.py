@@ -7,7 +7,6 @@ from langgraph.types import Send
 from langgraph.graph import StateGraph
 from langgraph.graph import START, END
 from langchain_core.runnables import RunnableConfig
-from google.genai import Client
 
 from agent.state import (
     OverallState,
@@ -23,28 +22,20 @@ from agent.prompts import (
     reflection_instructions,
     answer_instructions,
 )
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
+from langchain_google_community import GoogleSearchAPIWrapper
 from agent.utils import (
-    get_citations,
     get_research_topic,
-    insert_citation_markers,
-    resolve_urls,
+    format_search_results,
 )
 
 load_dotenv()
-
-if os.getenv("GEMINI_API_KEY") is None:
-    raise ValueError("GEMINI_API_KEY is not set")
-
-# Used for Google Search API
-genai_client = Client(api_key=os.getenv("GEMINI_API_KEY"))
-
 
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
     """LangGraph node that generates search queries based on the User's question.
 
-    Uses Gemini 2.0 Flash to create an optimized search queries for web research based on
+    Uses a local Ollama model to create optimized search queries for web research based on
     the User's question.
 
     Args:
@@ -60,12 +51,11 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     if state.get("initial_search_query_count") is None:
         state["initial_search_query_count"] = configurable.number_of_initial_queries
 
-    # init Gemini 2.0 Flash
-    llm = ChatGoogleGenerativeAI(
+    # init Ollama
+    llm = ChatOllama(
         model=configurable.query_generator_model,
         temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     )
     structured_llm = llm.with_structured_output(SearchQueryList)
 
@@ -93,9 +83,9 @@ def continue_to_web_research(state: QueryGenerationState):
 
 
 def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
-    """LangGraph node that performs web research using the native Google Search API tool.
+    """LangGraph node that performs web research using the Google Search API.
 
-    Executes a web search using the native Google Search API tool in combination with Gemini 2.0 Flash.
+    Executes a web search using the Google Search API and uses a local Ollama model to synthesize results.
 
     Args:
         state: Current graph state containing the search query and research loop count
@@ -106,33 +96,42 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     """
     # Configure
     configurable = Configuration.from_runnable_config(config)
+
+    # Initialize Google Search
+    search = GoogleSearchAPIWrapper()
+
+    # Perform Search
+    search_results = search.results(state["search_query"], num_results=5)
+    formatted_results = format_search_results(search_results)
+
+    # Initialize Ollama
+    llm = ChatOllama(
+        model=configurable.query_generator_model,
+        temperature=0,
+        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    )
+
     formatted_prompt = web_searcher_instructions.format(
         current_date=get_current_date(),
         research_topic=state["search_query"],
+        search_results=formatted_results
     )
 
-    # Uses the google genai client as the langchain client doesn't return grounding metadata
-    response = genai_client.models.generate_content(
-        model=configurable.query_generator_model,
-        contents=formatted_prompt,
-        config={
-            "tools": [{"google_search": {}}],
-            "temperature": 0,
-        },
-    )
-    # resolve the urls to short urls for saving tokens and time
-    resolved_urls = resolve_urls(
-        response.candidates[0].grounding_metadata.grounding_chunks, state["id"]
-    )
-    # Gets the citations and adds them to the generated text
-    citations = get_citations(response, resolved_urls)
-    modified_text = insert_citation_markers(response.text, citations)
-    sources_gathered = [item for citation in citations for item in citation["segments"]]
+    response = llm.invoke(formatted_prompt)
+
+    # Extract sources for tracking
+    sources_gathered = []
+    for result in search_results:
+        sources_gathered.append({
+            "title": result.get("title"),
+            "link": result.get("link"),
+            "snippet": result.get("snippet")
+        })
 
     return {
         "sources_gathered": sources_gathered,
         "search_query": [state["search_query"]],
-        "web_research_result": [modified_text],
+        "web_research_result": [response.content],
     }
 
 
@@ -163,11 +162,10 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
         summaries="\n\n---\n\n".join(state["web_research_result"]),
     )
     # init Reasoning Model
-    llm = ChatGoogleGenerativeAI(
+    llm = ChatOllama(
         model=reasoning_model,
         temperature=1.0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     )
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
@@ -241,23 +239,26 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
         summaries="\n---\n\n".join(state["web_research_result"]),
     )
 
-    # init Reasoning Model, default to Gemini 2.5 Flash
-    llm = ChatGoogleGenerativeAI(
+    # init Reasoning Model
+    llm = ChatOllama(
         model=reasoning_model,
         temperature=0,
-        max_retries=2,
-        api_key=os.getenv("GEMINI_API_KEY"),
+        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     )
     result = llm.invoke(formatted_prompt)
 
-    # Replace the short urls with the original urls and add all used urls to the sources_gathered
+    # In this new flow, we just rely on the LLM to format sources correctly in the text
+    # based on the summaries provided. The complex URL replacement is no longer needed
+    # as we provided full URLs in the context.
+
+    # We just filter unique sources for the state record
+    # Note: simple deduplication by link
     unique_sources = []
+    seen_links = set()
     for source in state["sources_gathered"]:
-        if source["short_url"] in result.content:
-            result.content = result.content.replace(
-                source["short_url"], source["value"]
-            )
+        if source["link"] not in seen_links:
             unique_sources.append(source)
+            seen_links.add(source["link"])
 
     return {
         "messages": [AIMessage(content=result.content)],
