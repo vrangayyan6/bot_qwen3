@@ -1,127 +1,74 @@
-# Gemini Fullstack LangGraph Quickstart
+# Local Research Agent with Ollama and Streamlit
 
-This project demonstrates a fullstack application using a React frontend and a LangGraph-powered backend agent. The agent is designed to perform comprehensive research on a user's query by dynamically generating search terms, querying the web using Google Search, reflecting on the results to identify knowledge gaps, and iteratively refining its search until it can provide a well-supported answer with citations. This application serves as an example of building research-augmented conversational AI using LangGraph and Google's Gemini models.
-
-<img src="./app.png" title="Gemini Fullstack LangGraph" alt="Gemini Fullstack LangGraph" width="90%">
+This project is a local research agent powered by [LangGraph](https://langchain-ai.github.io/langgraph/), [Ollama](https://ollama.com/), and [Google Custom Search](https://developers.google.com/custom-search/v1/overview). It features a Streamlit UI for interacting with the agent.
 
 ## Features
 
-- 💬 Fullstack application with a React frontend and LangGraph backend.
-- 🧠 Powered by a LangGraph agent for advanced research and conversational AI.
-- 🔍 Dynamic search query generation using local Ollama models (e.g., qwen3:4b).
-- 🌐 Integrated web research via Google Custom Search API.
-- 🤔 Reflective reasoning to identify knowledge gaps and refine searches using local models.
-- 📄 Generates answers with citations from gathered sources.
-- 🔄 Hot-reloading for both frontend and backend during development.
+- 🕵️ **Autonomous Research**: Generates search queries, reads web pages, and reflects on findings.
+- 🏠 **Local LLMs**: Uses local models via Ollama (default: `qwen3:4b`, supports `gemma3:4b`, etc.).
+- 🌐 **Google Search**: Integrates with Google Custom Search API for real-time information.
+- 💬 **Streamlit UI**: Simple chat interface to run research tasks and view progress.
 
-## Project Structure
+## Prerequisites
 
-The project is divided into two main directories:
+1.  **Ollama**: Install [Ollama](https://ollama.com/) and pull your desired model:
+    ```bash
+    ollama pull qwen3:4b
+    ollama pull gemma3:4b
+    ```
+2.  **Google Search API**:
+    -   Get a [Google API Key](https://developers.google.com/custom-search/v1/overview).
+    -   Get a [Custom Search Engine ID (CSE ID)](https://cse.google.com/cse/all).
 
--   `frontend/`: Contains the React application built with Vite.
--   `backend/`: Contains the LangGraph/FastAPI application, including the research agent logic.
+## Getting Started
 
-## Getting Started: Development and Local Testing
+### Option 1: Run Locally (Recommended for dev)
 
-Follow these steps to get the application running locally for development and testing.
+1.  **Clone the repository.**
 
-**1. Prerequisites:**
+2.  **Install Backend Dependencies:**
+    ```bash
+    cd backend
+    pip install -e .
+    ```
 
--   Node.js and npm (or yarn/pnpm)
--   Python 3.11+
--   **Ollama**: Ensure Ollama is running locally with the desired model (default: `qwen3:4b`).
--   **Google Search API**:
-    1.  Navigate to the `backend/` directory.
-    2.  Create a file named `.env` by copying the `backend/.env.example` file.
-    3.  Add your Google API Key and CSE ID:
-        ```bash
-        GOOGLE_API_KEY="YOUR_GOOGLE_API_KEY"
-        GOOGLE_CSE_ID="YOUR_CSE_ID"
-        OLLAMA_BASE_URL="http://localhost:11434" # Optional, defaults to localhost
-        ```
+3.  **Install Streamlit Dependencies:**
+    ```bash
+    cd ../streamlit_app
+    pip install -r requirements.txt
+    ```
 
-**2. Install Dependencies:**
+4.  **Configure Environment:**
+    Create a `.env` file in `backend/` or set variables in the UI sidebar.
+    ```bash
+    # backend/.env
+    GOOGLE_API_KEY="your_api_key"
+    GOOGLE_CSE_ID="your_cse_id"
+    OLLAMA_BASE_URL="http://localhost:11434"
+    ```
 
-**Backend:**
+5.  **Run the App:**
+    ```bash
+    # From streamlit_app directory
+    streamlit run app.py
+    ```
 
-```bash
-cd backend
-pip install .
-```
+### Option 2: Run with Docker
 
-**Frontend:**
+1.  **Build and Run:**
+    ```bash
+    GOOGLE_API_KEY=your_key GOOGLE_CSE_ID=your_id docker-compose up --build
+    ```
+    *Note: Linux users may need to ensure `host.docker.internal` is accessible for Ollama.*
 
-```bash
-cd frontend
-npm install
-```
+2.  **Access the App:**
+    Open `http://localhost:8501` in your browser.
 
-**3. Run Development Servers:**
+## Architecture
 
-**Backend & Frontend:**
-
-```bash
-make dev
-```
-This will run the backend and frontend development servers.    Open your browser and navigate to the frontend development server URL (e.g., `http://localhost:5173/app`).
-
-_Alternatively, you can run the backend and frontend development servers separately. For the backend, open a terminal in the `backend/` directory and run `langgraph dev`. The backend API will be available at `http://127.0.0.1:2024`. It will also open a browser window to the LangGraph UI. For the frontend, open a terminal in the `frontend/` directory and run `npm run dev`. The frontend will be available at `http://localhost:5173`._
-
-## How the Backend Agent Works (High-Level)
-
-The core of the backend is a LangGraph agent defined in `backend/src/agent/graph.py`. It follows these steps:
-
-<img src="./agent.png" title="Agent Flow" alt="Agent Flow" width="50%">
-
-1.  **Generate Initial Queries:** Based on your input, it generates a set of initial search queries using a local Ollama model.
-2.  **Web Research:** For each query, it uses the Google Custom Search API to find relevant web pages.
-3.  **Reflection & Knowledge Gap Analysis:** The agent analyzes the search results to determine if the information is sufficient or if there are knowledge gaps. It uses a local Ollama model for this reflection process.
-4.  **Iterative Refinement:** If gaps are found or the information is insufficient, it generates follow-up queries and repeats the web research and reflection steps (up to a configured maximum number of loops).
-5.  **Finalize Answer:** Once the research is deemed sufficient, the agent synthesizes the gathered information into a coherent answer, including citations from the web sources, using a local Ollama model.
-
-## CLI Example
-
-For quick one-off questions you can execute the agent from the command line. The
-script `backend/examples/cli_research.py` runs the LangGraph agent and prints the
-final answer:
-
-```bash
-cd backend
-python examples/cli_research.py "What are the latest trends in renewable energy?"
-```
-
-
-## Deployment
-
-In production, the backend server serves the optimized static frontend build. LangGraph requires a Redis instance and a Postgres database. Redis is used as a pub-sub broker to enable streaming real time output from background runs. Postgres is used to store assistants, threads, runs, persist thread state and long term memory, and to manage the state of the background task queue with 'exactly once' semantics. For more details on how to deploy the backend server, take a look at the [LangGraph Documentation](https://langchain-ai.github.io/langgraph/concepts/deployment_options/). Below is an example of how to build a Docker image that includes the optimized frontend build and the backend server and run it via `docker-compose`.
-
-_Note: For the docker-compose.yml example you need a LangSmith API key, you can get one from [LangSmith](https://smith.langchain.com/settings)._
-
-_Note: If you are not running the docker-compose.yml example or exposing the backend server to the public internet, you should update the `apiUrl` in the `frontend/src/App.tsx` file to your host. Currently the `apiUrl` is set to `http://localhost:8123` for docker-compose or `http://localhost:2024` for development._
-
-**1. Build the Docker Image:**
-
-   Run the following command from the **project root directory**:
-   ```bash
-   docker build -t gemini-fullstack-langgraph -f Dockerfile .
-   ```
-**2. Run the Production Server:**
-
-   ```bash
-   OLLAMA_BASE_URL=http://host.docker.internal:11434 GOOGLE_API_KEY=<your_key> GOOGLE_CSE_ID=<your_id> LANGSMITH_API_KEY=<your_langsmith_api_key> docker-compose up
-   ```
-
-Open your browser and navigate to `http://localhost:8123/app/` to see the application. The API will be available at `http://localhost:8123`.
-
-## Technologies Used
-
-- [React](https://reactjs.org/) (with [Vite](https://vitejs.dev/)) - For the frontend user interface.
-- [Tailwind CSS](https://tailwindcss.com/) - For styling.
-- [Shadcn UI](https://ui.shadcn.com/) - For components.
-- [LangGraph](https://github.com/langchain-ai/langgraph) - For building the backend research agent.
-- [Ollama](https://ollama.com/) - Run LLMs locally (e.g., qwen3:4b).
-- [Google Custom Search JSON API](https://developers.google.com/custom-search/v1/overview) - For web research.
+-   **Backend (`backend/`)**: Contains the LangGraph agent logic (`agent/graph.py`) and configuration.
+-   **Frontend (`streamlit_app/`)**: A Streamlit application that imports the backend graph and runs it directly.
 
 ## License
 
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details. 
+MIT

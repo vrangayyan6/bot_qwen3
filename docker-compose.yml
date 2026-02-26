@@ -1,46 +1,16 @@
-volumes:
-  langgraph-data:
-    driver: local
+version: "3.8"
+
 services:
-  langgraph-redis:
-    image: docker.io/redis:6
-    container_name: langgraph-redis
-    healthcheck:
-      test: redis-cli ping
-      interval: 5s
-      timeout: 1s
-      retries: 5
-  langgraph-postgres:
-    image: docker.io/postgres:16
-    container_name: langgraph-postgres
+  research-agent:
+    build: .
+    container_name: research-agent
     ports:
-      - "5433:5432"
+      - "8501:8501"
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - langgraph-data:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U postgres
-      start_period: 10s
-      timeout: 1s
-      retries: 5
-      interval: 5s
-  langgraph-api:
-    image: gemini-fullstack-langgraph
-    container_name: langgraph-api
-    ports:
-      - "8123:8000"
-    depends_on:
-      langgraph-redis:
-        condition: service_healthy
-      langgraph-postgres:
-        condition: service_healthy
-    environment:
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
-      GOOGLE_CSE_ID: ${GOOGLE_CSE_ID}
-      LANGSMITH_API_KEY: ${LANGSMITH_API_KEY}
-      REDIS_URI: redis://langgraph-redis:6379
-      POSTGRES_URI: postgres://postgres:postgres@langgraph-postgres:5432/postgres?sslmode=disable
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+    # For Linux users to access host localhost
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
