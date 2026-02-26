@@ -15,7 +15,7 @@ load_dotenv('../backend/.env')
 st.set_page_config(page_title="Research Agent", page_icon="🕵️")
 
 st.title("🕵️ Research Agent")
-st.caption("Powered by LangGraph, Ollama, and Google Search")
+st.caption("Powered by LangGraph, Ollama, and DuckDuckGo")
 
 # Sidebar Configuration
 with st.sidebar:
@@ -32,20 +32,13 @@ with st.sidebar:
     custom_model = st.text_input("Or enter custom model name (e.g., 'phi3:mini')")
     final_model = custom_model if custom_model else selected_model
 
-    google_api_key = st.text_input("Google API Key", value=os.getenv("GOOGLE_API_KEY", ""), type="password")
-    google_cse_id = st.text_input("Google CSE ID", value=os.getenv("GOOGLE_CSE_ID", ""), type="password")
-
-    if google_api_key:
-        os.environ["GOOGLE_API_KEY"] = google_api_key
-    if google_cse_id:
-        os.environ["GOOGLE_CSE_ID"] = google_cse_id
     if ollama_base_url:
         os.environ["OLLAMA_BASE_URL"] = ollama_base_url
 
     st.divider()
     st.markdown("### About")
     st.markdown(
-        "This agent performs comprehensive web research using local LLMs and Google Search."
+        "This agent performs comprehensive web research using local LLMs and DuckDuckGo."
     )
 
 # Chat Interface

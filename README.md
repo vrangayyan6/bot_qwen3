@@ -1,12 +1,12 @@
 # Local Research Agent with Ollama and Streamlit
 
-This project is a local research agent powered by [LangGraph](https://langchain-ai.github.io/langgraph/), [Ollama](https://ollama.com/), and [Google Custom Search](https://developers.google.com/custom-search/v1/overview). It features a Streamlit UI for interacting with the agent.
+This project is a local research agent powered by [LangGraph](https://langchain-ai.github.io/langgraph/), [Ollama](https://ollama.com/), and [DuckDuckGo](https://duckduckgo.com/). It features a Streamlit UI for interacting with the agent.
 
 ## Features
 
 - 🕵️ **Autonomous Research**: Generates search queries, reads web pages, and reflects on findings.
 - 🏠 **Local LLMs**: Uses local models via Ollama (default: `qwen3:4b`, supports `gemma3:4b`, etc.).
-- 🌐 **Google Search**: Integrates with Google Custom Search API for real-time information.
+- 🌐 **DuckDuckGo Search**: Integrates with DuckDuckGo for free, real-time web research (no API key required).
 - 💬 **Streamlit UI**: Simple chat interface to run research tasks and view progress.
 
 ## Prerequisites
@@ -16,9 +16,6 @@ This project is a local research agent powered by [LangGraph](https://langchain-
     ollama pull qwen3:4b
     ollama pull gemma3:4b
     ```
-2.  **Google Search API**:
-    -   Get a [Google API Key](https://developers.google.com/custom-search/v1/overview).
-    -   Get a [Custom Search Engine ID (CSE ID)](https://cse.google.com/cse/all).
 
 ## Getting Started
 
@@ -38,12 +35,10 @@ This project is a local research agent powered by [LangGraph](https://langchain-
     pip install -r requirements.txt
     ```
 
-4.  **Configure Environment:**
-    Create a `.env` file in `backend/` or set variables in the UI sidebar.
+4.  **Configure Environment (Optional):**
+    You can set `OLLAMA_BASE_URL` if your Ollama instance is not at `http://localhost:11434`.
     ```bash
     # backend/.env
-    GOOGLE_API_KEY="your_api_key"
-    GOOGLE_CSE_ID="your_cse_id"
     OLLAMA_BASE_URL="http://localhost:11434"
     ```
 
@@ -57,7 +52,7 @@ This project is a local research agent powered by [LangGraph](https://langchain-
 
 1.  **Build and Run:**
     ```bash
-    GOOGLE_API_KEY=your_key GOOGLE_CSE_ID=your_id docker-compose up --build
+    docker-compose up --build
     ```
     *Note: Linux users may need to ensure `host.docker.internal` is accessible for Ollama.*
 

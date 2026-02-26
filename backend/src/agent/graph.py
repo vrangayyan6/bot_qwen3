@@ -23,7 +23,7 @@ from agent.prompts import (
     answer_instructions,
 )
 from langchain_ollama import ChatOllama
-from langchain_google_community import GoogleSearchAPIWrapper
+from langchain_community.tools import DuckDuckGoSearchRun
 from agent.utils import (
     get_research_topic,
     format_search_results,
@@ -83,9 +83,9 @@ def continue_to_web_research(state: QueryGenerationState):
 
 
 def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
-    """LangGraph node that performs web research using the Google Search API.
+    """LangGraph node that performs web research using DuckDuckGo.
 
-    Executes a web search using the Google Search API and uses a local Ollama model to synthesize results.
+    Executes a web search using DuckDuckGo and uses a local Ollama model to synthesize results.
 
     Args:
         state: Current graph state containing the search query and research loop count
@@ -97,12 +97,12 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     # Configure
     configurable = Configuration.from_runnable_config(config)
 
-    # Initialize Google Search
-    search = GoogleSearchAPIWrapper()
+    # Initialize DuckDuckGo Search
+    search = DuckDuckGoSearchRun()
 
     # Perform Search
-    search_results = search.results(state["search_query"], num_results=5)
-    formatted_results = format_search_results(search_results)
+    # DuckDuckGoSearchRun returns a string summary directly
+    search_results = search.invoke(state["search_query"])
 
     # Initialize Ollama
     llm = ChatOllama(
@@ -114,19 +114,20 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     formatted_prompt = web_searcher_instructions.format(
         current_date=get_current_date(),
         research_topic=state["search_query"],
-        search_results=formatted_results
+        search_results=search_results
     )
 
     response = llm.invoke(formatted_prompt)
 
     # Extract sources for tracking
-    sources_gathered = []
-    for result in search_results:
-        sources_gathered.append({
-            "title": result.get("title"),
-            "link": result.get("link"),
-            "snippet": result.get("snippet")
-        })
+    # DuckDuckGoSearchRun result is unstructured text, so we can't easily parse out
+    # structured "sources" like title/link/snippet without a more complex parser or using a different tool.
+    # For now, we will store the raw search result as a "source" entry for simplicity.
+    sources_gathered = [{
+        "title": "DuckDuckGo Search Result",
+        "link": "https://duckduckgo.com",
+        "snippet": search_results[:200] + "..." # Store a preview
+    }]
 
     return {
         "sources_gathered": sources_gathered,

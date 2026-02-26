@@ -19,7 +19,9 @@ dependencies = [
     "fastapi",
     "google-genai",
     "langchain-ollama",
-    "langchain-google-community",
+    "langchain-community",
+    "duckduckgo-search",
+    "ddgs",
     "streamlit>=1.36.0",
 ]
 

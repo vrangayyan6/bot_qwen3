@@ -19,21 +19,25 @@ def get_research_topic(messages: List[AnyMessage]) -> str:
     return research_topic
 
 
-def format_search_results(search_results: List[Dict[str, Any]]) -> str:
+def format_search_results(search_results: Any) -> str:
     """
     Format search results into a string for the LLM.
 
     Args:
-        search_results: List of dictionaries containing 'title', 'link', 'snippet'.
+        search_results: Search results, either a list of dicts (Google) or a string (DuckDuckGo).
 
     Returns:
         Formatted string of search results.
     """
+    if isinstance(search_results, str):
+        return search_results
+
     formatted_results = ""
-    for i, result in enumerate(search_results):
-        formatted_results += f"Source [{i+1}]:\n"
-        formatted_results += f"Title: {result.get('title', 'No Title')}\n"
-        formatted_results += f"URL: {result.get('link', 'No URL')}\n"
-        formatted_results += f"Snippet: {result.get('snippet', 'No Snippet')}\n\n"
+    if isinstance(search_results, list):
+        for i, result in enumerate(search_results):
+            formatted_results += f"Source [{i+1}]:\n"
+            formatted_results += f"Title: {result.get('title', 'No Title')}\n"
+            formatted_results += f"URL: {result.get('link', 'No URL')}\n"
+            formatted_results += f"Snippet: {result.get('snippet', 'No Snippet')}\n\n"
 
     return formatted_results

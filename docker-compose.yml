@@ -8,8 +8,6 @@ services:
       - "8501:8501"
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GOOGLE_CSE_ID=${GOOGLE_CSE_ID}
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
     # For Linux users to access host localhost
     extra_hosts:
