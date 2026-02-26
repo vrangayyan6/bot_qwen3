@@ -23,7 +23,8 @@ with st.sidebar:
 
     ollama_base_url = st.text_input("Ollama Base URL", value=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
 
-    model_options = ["qwen3:4b", "gemma3:4b", "llama3.2", "mistral"]
+    # Updated model options with gemma3:1b as default
+    model_options = ["gemma3:1b", "qwen3:4b", "gemma3:4b", "llama3.2", "mistral"]
     selected_model = st.selectbox(
         "Select Model",
         options=model_options,
