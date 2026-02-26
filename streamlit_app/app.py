@@ -23,8 +23,8 @@ with st.sidebar:
 
     ollama_base_url = st.text_input("Ollama Base URL", value=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
 
-    # Updated model options with gemma3:1b as default
-    model_options = ["gemma3:1b", "qwen3:4b", "gemma3:4b", "llama3.2", "mistral"]
+    # Updated model options with gemma3n:e2b as default
+    model_options = ["gemma3n:e2b", "gemma3:1b", "qwen3:4b", "gemma3:4b", "llama3.2", "mistral"]
     selected_model = st.selectbox(
         "Select Model",
         options=model_options,
@@ -77,21 +77,34 @@ if prompt := st.chat_input("What would you like to research?"):
                     for node, values in chunk.items():
                         if node == "generate_query":
                             status.write(f"Generated queries: {values['search_query']}")
+                            with st.expander("Details: Query Generation"):
+                                st.json(values)
                         elif node == "web_research":
                             status.write(f"Researched: {values['search_query'][0]}")
-                            with st.expander("View Sources"):
+                            with st.expander("Details: Web Research & Sources"):
+                                st.write("### Raw Result")
+                                st.write(values.get("web_research_result", ["No result"])[0])
+                                st.write("### Sources")
                                 for source in values.get("sources_gathered", []):
                                     st.write(f"- [{source.get('title')}]({source.get('link')})")
+                                    st.caption(source.get("snippet"))
                         elif node == "reflection":
                             if values.get("is_sufficient"):
                                 status.write("Information is sufficient.")
                             else:
                                 status.write(f"Identifying knowledge gaps: {values.get('knowledge_gap')}")
                                 status.write(f"Follow-up queries: {values.get('follow_up_queries')}")
+                            with st.expander("Details: Reflection"):
+                                st.json(values)
                         elif node == "finalize_answer":
                             status.update(label="Research Complete!", state="complete", expanded=False)
                             full_response = values['messages'][0].content
                             message_placeholder.markdown(full_response)
+                            with st.expander("Details: Final Answer"):
+                                st.write(full_response)
+                                st.write("### Sources Used")
+                                for source in values.get("sources_gathered", []):
+                                    st.write(f"- [{source.get('title')}]({source.get('link')})")
             except Exception as e:
                 status.update(label="Error occurred", state="error")
                 st.error(f"An error occurred: {str(e)}")
