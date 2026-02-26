@@ -70,17 +70,24 @@ if prompt := st.chat_input("What would you like to research?"):
         # Configure run with dynamic model selection
         config = {"configurable": {"query_generator_model": final_model, "reflection_model": final_model, "answer_model": final_model}}
 
-        with st.status("Thinking...", expanded=True) as status:
+        with st.status("Initializing research agent...", expanded=True) as status:
             try:
+                status.write("🚀 Starting research session...")
+                status.write(f"🧠 Using model: {final_model}")
+
                 # Stream updates from the graph
                 for chunk in graph.stream(initial_state, config=config):
                     for node, values in chunk.items():
+                        status.write(f"🔄 Entering step: {node}")
+
                         if node == "generate_query":
+                            status.write("🔍 Generating search queries...")
                             status.write(f"Generated queries: {values['search_query']}")
                             with st.expander("Details: Query Generation"):
                                 st.json(values)
+
                         elif node == "web_research":
-                            status.write(f"Researched: {values['search_query'][0]}")
+                            status.write(f"🌐 Conducting web research for: {values['search_query'][0]}")
                             with st.expander("Details: Web Research & Sources"):
                                 st.write("### Raw Result")
                                 st.write(values.get("web_research_result", ["No result"])[0])
@@ -88,15 +95,19 @@ if prompt := st.chat_input("What would you like to research?"):
                                 for source in values.get("sources_gathered", []):
                                     st.write(f"- [{source.get('title')}]({source.get('link')})")
                                     st.caption(source.get("snippet"))
+
                         elif node == "reflection":
+                            status.write("🤔 Reflecting on findings...")
                             if values.get("is_sufficient"):
-                                status.write("Information is sufficient.")
+                                status.write("✅ Information is sufficient.")
                             else:
-                                status.write(f"Identifying knowledge gaps: {values.get('knowledge_gap')}")
-                                status.write(f"Follow-up queries: {values.get('follow_up_queries')}")
+                                status.write(f"⚠️ Knowledge gap identified: {values.get('knowledge_gap')}")
+                                status.write(f"❓ Generating follow-up queries: {values.get('follow_up_queries')}")
                             with st.expander("Details: Reflection"):
                                 st.json(values)
+
                         elif node == "finalize_answer":
+                            status.write("📝 Synthesizing final answer...")
                             status.update(label="Research Complete!", state="complete", expanded=False)
                             full_response = values['messages'][0].content
                             message_placeholder.markdown(full_response)
@@ -105,6 +116,9 @@ if prompt := st.chat_input("What would you like to research?"):
                                 st.write("### Sources Used")
                                 for source in values.get("sources_gathered", []):
                                     st.write(f"- [{source.get('title')}]({source.get('link')})")
+
+                        status.write(f"✅ Finished step: {node}")
+
             except Exception as e:
                 status.update(label="Error occurred", state="error")
                 st.error(f"An error occurred: {str(e)}")
