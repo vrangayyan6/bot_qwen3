@@ -37,8 +37,8 @@ with st.sidebar:
     max_context_tokens = st.number_input(
         "Max Context Tokens",
         min_value=500,
-        max_value=128000,
-        value=4000,
+        max_value=12000,
+        value=500,
         step=500,
         help="Limit the number of tokens sent to the LLM to save VRAM."
     )

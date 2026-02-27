@@ -6,6 +6,7 @@ def get_research_topic(messages: List[AnyMessage]) -> str:
     """
     Get the research topic from the messages.
     """
+    print("--- Entering get_research_topic ---")
     # check if request has a history and combine the messages into a single string
     if len(messages) == 1:
         research_topic = messages[-1].content
@@ -16,6 +17,7 @@ def get_research_topic(messages: List[AnyMessage]) -> str:
                 research_topic += f"User: {message.content}\n"
             elif isinstance(message, AIMessage):
                 research_topic += f"Assistant: {message.content}\n"
+    print("--- Exiting get_research_topic ---")
     return research_topic
 
 
@@ -29,7 +31,9 @@ def format_search_results(search_results: Any) -> str:
     Returns:
         Formatted string of search results.
     """
+    print("--- Entering format_search_results ---")
     if isinstance(search_results, str):
+        print("--- Exiting format_search_results (string) ---")
         return search_results
 
     formatted_results = ""
@@ -40,6 +44,7 @@ def format_search_results(search_results: Any) -> str:
             formatted_results += f"URL: {result.get('link', 'No URL')}\n"
             formatted_results += f"Snippet: {result.get('snippet', 'No Snippet')}\n\n"
 
+    print("--- Exiting format_search_results (list) ---")
     return formatted_results
 
 
@@ -55,12 +60,16 @@ def trim_to_token_limit(text: str, limit: int = 3000) -> str:
     Returns:
         The trimmed text.
     """
+    print(f"--- Entering trim_to_token_limit (limit={limit}) ---")
     if not text:
+        print("--- Exiting trim_to_token_limit (empty) ---")
         return ""
 
     # Approx 4 chars per token
     char_limit = limit * 4
 
     if len(text) > char_limit:
+        print(f"--- Exiting trim_to_token_limit (truncated from {len(text)} to {char_limit} chars) ---")
         return text[:char_limit] + "... [TRUNCATED]"
+    print("--- Exiting trim_to_token_limit (no truncation) ---")
     return text
