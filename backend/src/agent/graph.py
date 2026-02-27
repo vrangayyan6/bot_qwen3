@@ -27,6 +27,7 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from agent.utils import (
     get_research_topic,
     format_search_results,
+    trim_to_token_limit,
 )
 
 load_dotenv()
@@ -104,6 +105,9 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     # DuckDuckGoSearchRun returns a string summary directly
     search_results = search.invoke(state["search_query"])
 
+    # Limit tokens
+    search_results = trim_to_token_limit(search_results, limit=3000)
+
     # Initialize Ollama
     llm = ChatOllama(
         model=configurable.query_generator_model,
@@ -155,12 +159,16 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
     reasoning_model = state.get("reasoning_model", configurable.reflection_model)
 
+    # Trim summaries
+    summaries = "\n\n---\n\n".join(state["web_research_result"])
+    summaries = trim_to_token_limit(summaries, limit=3000)
+
     # Format the prompt
     current_date = get_current_date()
     formatted_prompt = reflection_instructions.format(
         current_date=current_date,
         research_topic=get_research_topic(state["messages"]),
-        summaries="\n\n---\n\n".join(state["web_research_result"]),
+        summaries=summaries,
     )
     # init Reasoning Model
     llm = ChatOllama(
@@ -232,12 +240,16 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     configurable = Configuration.from_runnable_config(config)
     reasoning_model = state.get("reasoning_model") or configurable.answer_model
 
+    # Trim summaries
+    summaries = "\n---\n\n".join(state["web_research_result"])
+    summaries = trim_to_token_limit(summaries, limit=3000)
+
     # Format the prompt
     current_date = get_current_date()
     formatted_prompt = answer_instructions.format(
         current_date=current_date,
         research_topic=get_research_topic(state["messages"]),
-        summaries="\n---\n\n".join(state["web_research_result"]),
+        summaries=summaries,
     )
 
     # init Reasoning Model

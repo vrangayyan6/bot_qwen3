@@ -41,3 +41,26 @@ def format_search_results(search_results: Any) -> str:
             formatted_results += f"Snippet: {result.get('snippet', 'No Snippet')}\n\n"
 
     return formatted_results
+
+
+def trim_to_token_limit(text: str, limit: int = 3000) -> str:
+    """
+    Trim text to a specific token limit using a simple character approximation.
+    Assumes approx 4 characters per token.
+
+    Args:
+        text: The text to trim.
+        limit: The maximum number of tokens allowed.
+
+    Returns:
+        The trimmed text.
+    """
+    if not text:
+        return ""
+
+    # Approx 4 chars per token
+    char_limit = limit * 4
+
+    if len(text) > char_limit:
+        return text[:char_limit] + "... [TRUNCATED]"
+    return text
