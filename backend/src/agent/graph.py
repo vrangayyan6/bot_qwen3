@@ -33,6 +33,9 @@ from agent.utils import (
 
 load_dotenv()
 
+# Initialize DuckDuckGo globally to prevent concurrent instantiation issues in parallel threads
+global_duckduckgo_search = DuckDuckGoSearchRun()
+
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
     """LangGraph node that generates search queries based on the User's question."""
@@ -81,13 +84,14 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     # Configure
     configurable = Configuration.from_runnable_config(config)
 
-    # Initialize DuckDuckGo Search
-    search = DuckDuckGoSearchRun()
-
-    # Perform Search
+    # Perform Search using global instance
     TraceLogger.log(f"Executing DuckDuckGo search for: {state['search_query']}")
-    search_results = search.invoke(state["search_query"])
-    TraceLogger.log(f"DuckDuckGo search completed. Result length: {len(search_results)}")
+    try:
+        search_results = global_duckduckgo_search.invoke(state["search_query"])
+        TraceLogger.log(f"DuckDuckGo search completed. Result length: {len(search_results)}")
+    except Exception as e:
+        TraceLogger.log(f"DuckDuckGo search failed with error: {str(e)}")
+        search_results = "Search failed or returned no results."
 
     # Limit tokens
     search_results = trim_to_token_limit(search_results, limit=configurable.max_context_tokens)
