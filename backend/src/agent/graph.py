@@ -106,7 +106,7 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     search_results = search.invoke(state["search_query"])
 
     # Limit tokens
-    search_results = trim_to_token_limit(search_results, limit=3000)
+    search_results = trim_to_token_limit(search_results, limit=configurable.max_context_tokens)
 
     # Initialize Ollama
     llm = ChatOllama(
@@ -161,7 +161,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
 
     # Trim summaries
     summaries = "\n\n---\n\n".join(state["web_research_result"])
-    summaries = trim_to_token_limit(summaries, limit=3000)
+    summaries = trim_to_token_limit(summaries, limit=configurable.max_context_tokens)
 
     # Format the prompt
     current_date = get_current_date()
@@ -242,7 +242,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
 
     # Trim summaries
     summaries = "\n---\n\n".join(state["web_research_result"])
-    summaries = trim_to_token_limit(summaries, limit=3000)
+    summaries = trim_to_token_limit(summaries, limit=configurable.max_context_tokens)
 
     # Format the prompt
     current_date = get_current_date()

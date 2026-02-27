@@ -33,6 +33,16 @@ with st.sidebar:
     custom_model = st.text_input("Or enter custom model name (e.g., 'phi3:mini')")
     final_model = custom_model if custom_model else selected_model
 
+    # Token limit input
+    max_context_tokens = st.number_input(
+        "Max Context Tokens",
+        min_value=500,
+        max_value=128000,
+        value=4000,
+        step=500,
+        help="Limit the number of tokens sent to the LLM to save VRAM."
+    )
+
     if ollama_base_url:
         os.environ["OLLAMA_BASE_URL"] = ollama_base_url
 
@@ -67,13 +77,21 @@ if prompt := st.chat_input("What would you like to research?"):
             "reasoning_model": final_model    # Use selected model
         }
 
-        # Configure run with dynamic model selection
-        config = {"configurable": {"query_generator_model": final_model, "reflection_model": final_model, "answer_model": final_model}}
+        # Configure run with dynamic model selection and token limit
+        config = {
+            "configurable": {
+                "query_generator_model": final_model,
+                "reflection_model": final_model,
+                "answer_model": final_model,
+                "max_context_tokens": max_context_tokens
+            }
+        }
 
         with st.status("Initializing research agent...", expanded=True) as status:
             try:
                 status.write("🚀 Starting research session...")
                 status.write(f"🧠 Using model: {final_model}")
+                status.write(f"🔢 Context limit: {max_context_tokens} tokens")
 
                 # Stream updates from the graph
                 for chunk in graph.stream(initial_state, config=config):
@@ -85,6 +103,8 @@ if prompt := st.chat_input("What would you like to research?"):
                             status.write(f"Generated queries: {values['search_query']}")
                             with st.expander("Details: Query Generation"):
                                 st.json(values)
+                            # Predictive logging for next step
+                            status.write("🌐 Starting web research (this may take a moment)...")
 
                         elif node == "web_research":
                             status.write(f"🌐 Conducting web research for: {values['search_query'][0]}")
@@ -95,14 +115,20 @@ if prompt := st.chat_input("What would you like to research?"):
                                 for source in values.get("sources_gathered", []):
                                     st.write(f"- [{source.get('title')}]({source.get('link')})")
                                     st.caption(source.get("snippet"))
+                            # Predictive logging for next step
+                            status.write("🤔 Starting reflection...")
 
                         elif node == "reflection":
                             status.write("🤔 Reflecting on findings...")
                             if values.get("is_sufficient"):
                                 status.write("✅ Information is sufficient.")
+                                # Predictive logging for next step
+                                status.write("📝 Finalizing answer...")
                             else:
                                 status.write(f"⚠️ Knowledge gap identified: {values.get('knowledge_gap')}")
                                 status.write(f"❓ Generating follow-up queries: {values.get('follow_up_queries')}")
+                                # Predictive logging for next step
+                                status.write("🔄 Generating new queries...")
                             with st.expander("Details: Reflection"):
                                 st.json(values)
 

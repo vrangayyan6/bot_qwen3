@@ -39,6 +39,11 @@ class Configuration(BaseModel):
         metadata={"description": "The maximum number of research loops to perform."},
     )
 
+    max_context_tokens: int = Field(
+        default=3000,
+        metadata={"description": "The maximum number of tokens allowed in the context window for search results and summaries."},
+    )
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None
