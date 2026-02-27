@@ -35,18 +35,7 @@ load_dotenv()
 
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
-    """LangGraph node that generates search queries based on the User's question.
-
-    Uses a local Ollama model to create optimized search queries for web research based on
-    the User's question.
-
-    Args:
-        state: Current graph state containing the User's question
-        config: Configuration for the runnable, including LLM provider settings
-
-    Returns:
-        Dictionary with state update, including search_query key containing the generated queries
-    """
+    """LangGraph node that generates search queries based on the User's question."""
     TraceLogger.log("--- Entering generate_query ---")
     configurable = Configuration.from_runnable_config(config)
 
@@ -76,10 +65,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
 
 
 def continue_to_web_research(state: QueryGenerationState):
-    """LangGraph node that sends the search queries to the web research node.
-
-    This is used to spawn n number of web research nodes, one for each search query.
-    """
+    """LangGraph node that sends the search queries to the web research node."""
     TraceLogger.log("--- Entering continue_to_web_research ---")
     result = [
         Send("web_research", {"search_query": search_query, "id": int(idx)})
@@ -90,17 +76,7 @@ def continue_to_web_research(state: QueryGenerationState):
 
 
 def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
-    """LangGraph node that performs web research using DuckDuckGo.
-
-    Executes a web search using DuckDuckGo and uses a local Ollama model to synthesize results.
-
-    Args:
-        state: Current graph state containing the search query and research loop count
-        config: Configuration for the runnable, including search API settings
-
-    Returns:
-        Dictionary with state update, including sources_gathered, research_loop_count, and web_research_results
-    """
+    """LangGraph node that performs web research using DuckDuckGo."""
     TraceLogger.log("--- Entering web_research ---")
     # Configure
     configurable = Configuration.from_runnable_config(config)
@@ -109,8 +85,9 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     search = DuckDuckGoSearchRun()
 
     # Perform Search
-    # DuckDuckGoSearchRun returns a string summary directly
+    TraceLogger.log(f"Executing DuckDuckGo search for: {state['search_query']}")
     search_results = search.invoke(state["search_query"])
+    TraceLogger.log(f"DuckDuckGo search completed. Result length: {len(search_results)}")
 
     # Limit tokens
     search_results = trim_to_token_limit(search_results, limit=configurable.max_context_tokens)
@@ -128,12 +105,11 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         search_results=search_results
     )
 
+    TraceLogger.log(f"Invoking Ollama summary for query: {state['search_query']}")
     response = llm.invoke(formatted_prompt)
+    TraceLogger.log(f"Ollama summary completed for query: {state['search_query']}")
 
     # Extract sources for tracking
-    # DuckDuckGoSearchRun result is unstructured text, so we can't easily parse out
-    # structured "sources" like title/link/snippet without a more complex parser or using a different tool.
-    # For now, we will store the raw search result as a "source" entry for simplicity.
     sources_gathered = [{
         "title": "DuckDuckGo Search Result",
         "link": "https://duckduckgo.com",
@@ -149,19 +125,7 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
 
 
 def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
-    """LangGraph node that identifies knowledge gaps and generates potential follow-up queries.
-
-    Analyzes the current summary to identify areas for further research and generates
-    potential follow-up queries. Uses structured output to extract
-    the follow-up query in JSON format.
-
-    Args:
-        state: Current graph state containing the running summary and research topic
-        config: Configuration for the runnable, including LLM provider settings
-
-    Returns:
-        Dictionary with state update, including search_query key containing the generated follow-up query
-    """
+    """LangGraph node that identifies knowledge gaps and generates potential follow-up queries."""
     TraceLogger.log("--- Entering reflection ---")
     configurable = Configuration.from_runnable_config(config)
     # Increment the research loop count and get the reasoning model
@@ -201,18 +165,7 @@ def evaluate_research(
     state: ReflectionState,
     config: RunnableConfig,
 ) -> OverallState:
-    """LangGraph routing function that determines the next step in the research flow.
-
-    Controls the research loop by deciding whether to continue gathering information
-    or to finalize the summary based on the configured maximum number of research loops.
-
-    Args:
-        state: Current graph state containing the research loop count
-        config: Configuration for the runnable, including max_research_loops setting
-
-    Returns:
-        String literal indicating the next node to visit ("web_research" or "finalize_summary")
-    """
+    """LangGraph routing function that determines the next step in the research flow."""
     TraceLogger.log("--- Entering evaluate_research ---")
     configurable = Configuration.from_runnable_config(config)
     max_research_loops = (
@@ -238,18 +191,7 @@ def evaluate_research(
 
 
 def finalize_answer(state: OverallState, config: RunnableConfig):
-    """LangGraph node that finalizes the research summary.
-
-    Prepares the final output by deduplicating and formatting sources, then
-    combining them with the running summary to create a well-structured
-    research report with proper citations.
-
-    Args:
-        state: Current graph state containing the running summary and sources gathered
-
-    Returns:
-        Dictionary with state update, including running_summary key containing the formatted final summary with sources
-    """
+    """LangGraph node that finalizes the research summary."""
     TraceLogger.log("--- Entering finalize_answer ---")
     configurable = Configuration.from_runnable_config(config)
     reasoning_model = state.get("reasoning_model") or configurable.answer_model
@@ -274,12 +216,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     )
     result = llm.invoke(formatted_prompt)
 
-    # In this new flow, we just rely on the LLM to format sources correctly in the text
-    # based on the summaries provided. The complex URL replacement is no longer needed
-    # as we provided full URLs in the context.
-
     # We just filter unique sources for the state record
-    # Note: simple deduplication by link
     unique_sources = []
     seen_links = set()
     for source in state["sources_gathered"]:
@@ -304,7 +241,6 @@ builder.add_node("reflection", reflection)
 builder.add_node("finalize_answer", finalize_answer)
 
 # Set the entrypoint as `generate_query`
-# This means that this node is the first one called
 builder.add_edge(START, "generate_query")
 # Add conditional edge to continue with search queries in a parallel branch
 builder.add_conditional_edges(
