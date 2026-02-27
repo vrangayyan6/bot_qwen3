@@ -1,28 +1,31 @@
 from typing import Any, Dict, List
 from langchain_core.messages import AnyMessage, AIMessage, HumanMessage
 import datetime
+import threading
+
+# A global, thread-safe list to hold trace logs across the app and background tasks
+GLOBAL_TRACE_LOGS = []
+_log_lock = threading.Lock()
 
 class TraceLogger:
     """
-    A utility to log tracing information to both console and Streamlit session state (if available).
+    A utility to log tracing information to both console and a global list
+    that the Streamlit UI can read from, avoiding thread-context issues.
     """
     @staticmethod
     def log(message: str):
         # 1. Print to console (always)
         print(message)
 
-        # 2. Try to append to Streamlit session state
-        try:
-            import streamlit as st
-            # Check if we are in a Streamlit context and if trace_logs exists
-            if hasattr(st, "session_state") and "trace_logs" in st.session_state:
-                timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-                st.session_state.trace_logs.append(f"[{timestamp}] {message}")
-        except ImportError:
-            pass
-        except Exception:
-            # Swallow any streamlit-related errors to avoid breaking the backend
-            pass
+        # 2. Append to global list safely
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        with _log_lock:
+            GLOBAL_TRACE_LOGS.append(f"[{timestamp}] {message}")
+
+    @staticmethod
+    def clear():
+        with _log_lock:
+            GLOBAL_TRACE_LOGS.clear()
 
 
 def get_research_topic(messages: List[AnyMessage]) -> str:

@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 sys.path.append(os.path.join(os.path.dirname(__file__), '../backend/src'))
 
 from agent.graph import graph
+from agent.utils import TraceLogger, GLOBAL_TRACE_LOGS
 from langchain_core.messages import HumanMessage
+import time
 
 # Load environment variables
 load_dotenv('../backend/.env')
@@ -16,10 +18,6 @@ st.set_page_config(page_title="Research Agent", page_icon="🕵️")
 
 st.title("🕵️ Research Agent")
 st.caption("Powered by LangGraph, Ollama, and DuckDuckGo")
-
-# Initialize trace logs in session state
-if "trace_logs" not in st.session_state:
-    st.session_state.trace_logs = []
 
 # Sidebar Configuration
 with st.sidebar:
@@ -60,7 +58,7 @@ with st.sidebar:
 with st.expander("System Trace Logs", expanded=True):
     log_container = st.empty()
     # Display logs (initially empty or from history)
-    log_container.code("\n".join(st.session_state.trace_logs) or "No logs yet.")
+    log_container.code("\n".join(GLOBAL_TRACE_LOGS) or "No logs yet.")
 
 # Chat Interface
 if "messages" not in st.session_state:
@@ -97,6 +95,10 @@ if prompt := st.chat_input("What would you like to research?"):
             }
         }
 
+        # Clear previous logs for a new run
+        TraceLogger.clear()
+        log_container.code("No logs yet.")
+
         with st.status("Initializing research agent...", expanded=True) as status:
             try:
                 status.write("🚀 Starting research session...")
@@ -105,8 +107,8 @@ if prompt := st.chat_input("What would you like to research?"):
 
                 # Stream updates from the graph
                 for chunk in graph.stream(initial_state, config=config):
-                    # Update logs in real-time
-                    log_container.code("\n".join(st.session_state.trace_logs))
+                    # Update logs in real-time using global thread-safe list
+                    log_container.code("\n".join(GLOBAL_TRACE_LOGS))
 
                     for node, values in chunk.items():
                         status.write(f"🔄 Entering step: {node}")
@@ -158,9 +160,14 @@ if prompt := st.chat_input("What would you like to research?"):
 
                         status.write(f"✅ Finished step: {node}")
 
+                # Final log update
+                log_container.code("\n".join(GLOBAL_TRACE_LOGS))
+
             except Exception as e:
                 status.update(label="Error occurred", state="error")
                 st.error(f"An error occurred: {str(e)}")
+                # Ensure logs are updated even on error
+                log_container.code("\n".join(GLOBAL_TRACE_LOGS))
 
         # Save interaction
         if full_response:
