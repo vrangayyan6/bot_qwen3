@@ -17,6 +17,10 @@ st.set_page_config(page_title="Research Agent", page_icon="🕵️")
 st.title("🕵️ Research Agent")
 st.caption("Powered by LangGraph, Ollama, and DuckDuckGo")
 
+# Initialize trace logs in session state
+if "trace_logs" not in st.session_state:
+    st.session_state.trace_logs = []
+
 # Sidebar Configuration
 with st.sidebar:
     st.header("Configuration")
@@ -51,6 +55,12 @@ with st.sidebar:
     st.markdown(
         "This agent performs comprehensive web research using local LLMs and DuckDuckGo."
     )
+
+# System Trace Logs Expander
+with st.expander("System Trace Logs", expanded=True):
+    log_container = st.empty()
+    # Display logs (initially empty or from history)
+    log_container.code("\n".join(st.session_state.trace_logs) or "No logs yet.")
 
 # Chat Interface
 if "messages" not in st.session_state:
@@ -95,6 +105,9 @@ if prompt := st.chat_input("What would you like to research?"):
 
                 # Stream updates from the graph
                 for chunk in graph.stream(initial_state, config=config):
+                    # Update logs in real-time
+                    log_container.code("\n".join(st.session_state.trace_logs))
+
                     for node, values in chunk.items():
                         status.write(f"🔄 Entering step: {node}")
 

@@ -28,6 +28,7 @@ from agent.utils import (
     get_research_topic,
     format_search_results,
     trim_to_token_limit,
+    TraceLogger,
 )
 
 load_dotenv()
@@ -46,7 +47,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     Returns:
         Dictionary with state update, including search_query key containing the generated queries
     """
-    print("--- Entering generate_query ---")
+    TraceLogger.log("--- Entering generate_query ---")
     configurable = Configuration.from_runnable_config(config)
 
     # check for custom initial search query count
@@ -70,7 +71,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     )
     # Generate the search queries
     result = structured_llm.invoke(formatted_prompt)
-    print("--- Exiting generate_query ---")
+    TraceLogger.log("--- Exiting generate_query ---")
     return {"search_query": result.query}
 
 
@@ -79,12 +80,12 @@ def continue_to_web_research(state: QueryGenerationState):
 
     This is used to spawn n number of web research nodes, one for each search query.
     """
-    print("--- Entering continue_to_web_research ---")
+    TraceLogger.log("--- Entering continue_to_web_research ---")
     result = [
         Send("web_research", {"search_query": search_query, "id": int(idx)})
         for idx, search_query in enumerate(state["search_query"])
     ]
-    print("--- Exiting continue_to_web_research ---")
+    TraceLogger.log("--- Exiting continue_to_web_research ---")
     return result
 
 
@@ -100,7 +101,7 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     Returns:
         Dictionary with state update, including sources_gathered, research_loop_count, and web_research_results
     """
-    print("--- Entering web_research ---")
+    TraceLogger.log("--- Entering web_research ---")
     # Configure
     configurable = Configuration.from_runnable_config(config)
 
@@ -139,7 +140,7 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
         "snippet": search_results[:200] + "..." # Store a preview
     }]
 
-    print("--- Exiting web_research ---")
+    TraceLogger.log("--- Exiting web_research ---")
     return {
         "sources_gathered": sources_gathered,
         "search_query": [state["search_query"]],
@@ -161,7 +162,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     Returns:
         Dictionary with state update, including search_query key containing the generated follow-up query
     """
-    print("--- Entering reflection ---")
+    TraceLogger.log("--- Entering reflection ---")
     configurable = Configuration.from_runnable_config(config)
     # Increment the research loop count and get the reasoning model
     state["research_loop_count"] = state.get("research_loop_count", 0) + 1
@@ -186,7 +187,7 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     )
     result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
 
-    print("--- Exiting reflection ---")
+    TraceLogger.log("--- Exiting reflection ---")
     return {
         "is_sufficient": result.is_sufficient,
         "knowledge_gap": result.knowledge_gap,
@@ -212,7 +213,7 @@ def evaluate_research(
     Returns:
         String literal indicating the next node to visit ("web_research" or "finalize_summary")
     """
-    print("--- Entering evaluate_research ---")
+    TraceLogger.log("--- Entering evaluate_research ---")
     configurable = Configuration.from_runnable_config(config)
     max_research_loops = (
         state.get("max_research_loops")
@@ -220,10 +221,10 @@ def evaluate_research(
         else configurable.max_research_loops
     )
     if state["is_sufficient"] or state["research_loop_count"] >= max_research_loops:
-        print("--- Exiting evaluate_research: finalize_answer ---")
+        TraceLogger.log("--- Exiting evaluate_research: finalize_answer ---")
         return "finalize_answer"
     else:
-        print("--- Exiting evaluate_research: web_research ---")
+        TraceLogger.log("--- Exiting evaluate_research: web_research ---")
         return [
             Send(
                 "web_research",
@@ -249,7 +250,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     Returns:
         Dictionary with state update, including running_summary key containing the formatted final summary with sources
     """
-    print("--- Entering finalize_answer ---")
+    TraceLogger.log("--- Entering finalize_answer ---")
     configurable = Configuration.from_runnable_config(config)
     reasoning_model = state.get("reasoning_model") or configurable.answer_model
 
@@ -286,7 +287,7 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
             unique_sources.append(source)
             seen_links.add(source["link"])
 
-    print("--- Exiting finalize_answer ---")
+    TraceLogger.log("--- Exiting finalize_answer ---")
     return {
         "messages": [AIMessage(content=result.content)],
         "sources_gathered": unique_sources,
