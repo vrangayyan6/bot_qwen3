@@ -24,7 +24,7 @@ from agent.prompts import (
     answer_instructions,
 )
 from langchain_ollama import ChatOllama
-from langchain_community.tools import DuckDuckGoSearchRun
+from duckduckgo_search import DDGS
 from agent.utils import (
     get_research_topic,
     format_search_results,
@@ -83,9 +83,35 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     configurable = Configuration.from_runnable_config(config)
 
     # Perform Search
+    sources_gathered = []
     try:
-        duckduckgo_search = DuckDuckGoSearchRun()
-        search_results = duckduckgo_search.invoke(state["search_query"])
+        import time
+        import random
+        # Add a small random sleep to prevent concurrent initialization deadlocks on Windows
+        # especially with curl_cffi when running in parallel.
+        time.sleep(random.uniform(0.1, 1.5))
+
+        with DDGS() as ddgs:
+            # We get up to 3 results per query to match previous expected behavior
+            results = list(ddgs.text(state["search_query"], max_results=3))
+
+            if results:
+                formatted_results = []
+                for r in results:
+                    formatted_results.append(
+                        f"Title: {r.get('title', '')}\n"
+                        f"URL: {r.get('href', '')}\n"
+                        f"Snippet: {r.get('body', '')}"
+                    )
+                    sources_gathered.append({
+                        "title": r.get('title', 'DuckDuckGo Search Result'),
+                        "link": r.get('href', 'https://duckduckgo.com'),
+                        "snippet": r.get('body', '')
+                    })
+                search_results = "\n\n".join(formatted_results)
+            else:
+                search_results = "No results found."
+
         TraceLogger.log(f"DuckDuckGo search completed. Result length: {len(search_results)}")
     except Exception as e:
         TraceLogger.log(f"DuckDuckGo search failed with error: {str(e)}")
@@ -111,12 +137,13 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     response = llm.invoke(formatted_prompt)
     TraceLogger.log(f"Ollama summary completed for query: {state['search_query']}")
 
-    # Extract sources for tracking
-    sources_gathered = [{
-        "title": "DuckDuckGo Search Result",
-        "link": "https://duckduckgo.com",
-        "snippet": search_results[:200] + "..." # Store a preview
-    }]
+    # If sources wasn't populated due to error or no results, provide a fallback
+    if not sources_gathered:
+        sources_gathered = [{
+            "title": "DuckDuckGo Search Result",
+            "link": "https://duckduckgo.com",
+            "snippet": search_results[:200] + "..." # Store a preview
+        }]
 
     TraceLogger.log("--- Exiting web_research ---")
     return {
