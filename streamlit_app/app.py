@@ -80,7 +80,7 @@ if prompt := st.chat_input("What would you like to research?"):
         # Prepare state
         initial_state = {
             "messages": [HumanMessage(content=prompt)],
-            "initial_search_query_count": 3,  # Default
+            "initial_search_query_count": 1,  # Default
             "max_research_loops": 2,         # Default
             "reasoning_model": final_model    # Use selected model
         }

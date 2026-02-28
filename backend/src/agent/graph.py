@@ -34,11 +34,6 @@ from agent.utils import (
 
 load_dotenv()
 
-# Initialize DuckDuckGo globally to prevent concurrent instantiation issues in parallel threads
-global_duckduckgo_search = DuckDuckGoSearchRun()
-# Global lock to serialize search invocations to prevent curl_cffi/asyncio deadlocks in ddgs
-search_lock = threading.Lock()
-
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
     """LangGraph node that generates search queries based on the User's question."""
@@ -87,13 +82,11 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     # Configure
     configurable = Configuration.from_runnable_config(config)
 
-    # Perform Search using global instance AND a thread lock to prevent concurrent deadlocks
-    TraceLogger.log(f"Waiting for lock to execute DuckDuckGo search for: {state['search_query']}")
+    # Perform Search
     try:
-        with search_lock:
-            TraceLogger.log(f"Acquired lock. Executing DuckDuckGo search for: {state['search_query']}")
-            search_results = global_duckduckgo_search.invoke(state["search_query"])
-            TraceLogger.log(f"DuckDuckGo search completed. Result length: {len(search_results)}")
+        duckduckgo_search = DuckDuckGoSearchRun()
+        search_results = duckduckgo_search.invoke(state["search_query"])
+        TraceLogger.log(f"DuckDuckGo search completed. Result length: {len(search_results)}")
     except Exception as e:
         TraceLogger.log(f"DuckDuckGo search failed with error: {str(e)}")
         search_results = "Search failed or returned no results."
