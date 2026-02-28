@@ -5,7 +5,7 @@ This project is a local research agent powered by [LangGraph](https://langchain-
 ## Features
 
 - 🕵️ **Autonomous Research**: Generates search queries, reads web pages, and reflects on findings.
-- 🏠 **Local LLMs**: Uses local models via Ollama (default: `qwen3:4b`, supports `gemma3:4b`, etc.).
+- 🏠 **Local LLMs**: Uses local models via Ollama (default: `gemma3n:e2b`).
 - 🌐 **DuckDuckGo Search**: Integrates with DuckDuckGo for free, real-time web research (no API key required).
 - 💬 **Streamlit UI**: Simple chat interface to run research tasks and view progress.
 
@@ -13,8 +13,7 @@ This project is a local research agent powered by [LangGraph](https://langchain-
 
 1.  **Ollama**: Install [Ollama](https://ollama.com/) and pull your desired model:
     ```bash
-    ollama pull qwen3:4b
-    ollama pull gemma3:4b
+    ollama pull gemma3n:e2b    
     ```
 
 ## Getting Started
