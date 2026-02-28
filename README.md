@@ -1,6 +1,6 @@
 # Local Research Agent with Ollama and Streamlit
 
-This project is a local research agent powered by [LangGraph](https://langchain-ai.github.io/langgraph/), [Ollama](https://ollama.com/), and [DuckDuckGo](https://duckduckgo.com/). It features a Streamlit UI for interacting with the agent.
+This project is a local research agent powered by [LangGraph](https://langchain-ai.github.io/langgraph/), [Ollama](https://ollama.com/), and [DuckDuckGo](https://duckduckgo.com/). It features a Streamlit UI for interacting with the agent.  Used [Google Jules](https://jules.google.com/) coding agent with starting point as [gemini-fullstack-langgraph-quickstart](https://github.com/google-gemini/gemini-fullstack-langgraph-quickstart).
 
 ## Features
 
@@ -46,6 +46,11 @@ This project is a local research agent powered by [LangGraph](https://langchain-
     ```bash
     # From streamlit_app directory
     streamlit run app.py
+    ```
+
+    or notebook
+    ```bash
+     jupyter notebook .\backend\langgraph_ollama.ipynb
     ```
 
 ### Option 2: Run with Docker
