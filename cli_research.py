@@ -24,7 +24,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--reasoning-model",
-        default="qwen3:4b",
+        default="gemma3n:e2b",
         help="Model for the final answer",
     )
     args = parser.parse_args()
