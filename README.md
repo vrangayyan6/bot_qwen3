@@ -44,6 +44,18 @@ This project is a local research agent powered by [LangGraph](https://langchain-
     jupyter notebook langgraph_ollama.ipynb
     ```
 
+5.  **Or run via CLI (no UI):**
+    ```bash
+    python cli_research.py "What are the latest advances in quantum computing?"
+    ```
+
+    CLI options:
+    | Flag | Default | Description |
+    |------|---------|-------------|
+    | `--initial-queries` | `1` | Number of search queries to generate |
+    | `--max-loops` | `2` | Maximum research loops |
+    | `--reasoning-model` | `qwen3:4b` | Ollama model to use |
+
 ### Option 2: Run with Docker
 
 1.  **Build and Run:**
@@ -59,6 +71,7 @@ This project is a local research agent powered by [LangGraph](https://langchain-
 
 -   **Agent (`agent/`)**: Contains the LangGraph agent logic (`graph.py`) and configuration.
 -   **Streamlit UI (`app.py`)**: A Streamlit application that imports the graph and runs it directly.
+-   **CLI (`cli_research.py`)**: A command-line interface for running research queries without the UI.
 
 ## License
 
