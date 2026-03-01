@@ -1,6 +1,9 @@
 import argparse
+from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from agent.graph import graph
+
+load_dotenv()
 
 
 def main() -> None:
@@ -10,7 +13,7 @@ def main() -> None:
     parser.add_argument(
         "--initial-queries",
         type=int,
-        default=3,
+        default=1,
         help="Number of initial search queries",
     )
     parser.add_argument(

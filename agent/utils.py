@@ -6,6 +6,7 @@ import threading
 # A global, thread-safe list to hold trace logs across the app and background tasks
 GLOBAL_TRACE_LOGS = []
 _log_lock = threading.Lock()
+_MAX_LOG_ENTRIES = 1000
 
 class TraceLogger:
     """
@@ -21,6 +22,8 @@ class TraceLogger:
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         with _log_lock:
             GLOBAL_TRACE_LOGS.append(f"[{timestamp}] {message}")
+            if len(GLOBAL_TRACE_LOGS) > _MAX_LOG_ENTRIES:
+                del GLOBAL_TRACE_LOGS[:len(GLOBAL_TRACE_LOGS) - _MAX_LOG_ENTRIES]
 
     @staticmethod
     def clear():
@@ -33,6 +36,9 @@ def get_research_topic(messages: List[AnyMessage]) -> str:
     Get the research topic from the messages.
     """
     TraceLogger.log("--- Entering get_research_topic ---")
+    if not messages:
+        TraceLogger.log("--- Exiting get_research_topic (empty messages) ---")
+        return ""
     # check if request has a history and combine the messages into a single string
     if len(messages) == 1:
         research_topic = messages[-1].content

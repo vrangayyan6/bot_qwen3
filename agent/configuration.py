@@ -44,6 +44,11 @@ class Configuration(BaseModel):
         metadata={"description": "The maximum number of tokens allowed in the context window for search results and summaries."},
     )
 
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        metadata={"description": "The base URL for the Ollama API."},
+    )
+
     @classmethod
     def from_runnable_config(
         cls, config: Optional[RunnableConfig] = None

@@ -1,12 +1,12 @@
 import streamlit as st
 import os
-import sys
 from dotenv import load_dotenv
+from urllib.request import urlopen
+from urllib.error import URLError
 
 from agent.graph import graph
 from agent.utils import TraceLogger, GLOBAL_TRACE_LOGS
 from langchain_core.messages import HumanMessage
-import time
 
 # Load environment variables
 load_dotenv()
@@ -41,9 +41,6 @@ with st.sidebar:
         step=500,
         help="Limit the number of tokens sent to the LLM to save VRAM."
     )
-
-    if ollama_base_url:
-        os.environ["OLLAMA_BASE_URL"] = ollama_base_url
 
     st.divider()
     st.markdown("### About")
@@ -82,13 +79,14 @@ if prompt := st.chat_input("What would you like to research?"):
             "reasoning_model": final_model    # Use selected model
         }
 
-        # Configure run with dynamic model selection and token limit
+        # Configure run with dynamic model selection, token limit, and Ollama URL
         config = {
             "configurable": {
                 "query_generator_model": final_model,
                 "reflection_model": final_model,
                 "answer_model": final_model,
-                "max_context_tokens": max_context_tokens
+                "max_context_tokens": max_context_tokens,
+                "ollama_base_url": ollama_base_url,
             }
         }
 
@@ -98,9 +96,19 @@ if prompt := st.chat_input("What would you like to research?"):
 
         with st.status("Initializing research agent...", expanded=True) as status:
             try:
+                # Verify Ollama is reachable before starting
+                try:
+                    urlopen(ollama_base_url, timeout=5)
+                except (URLError, OSError):
+                    st.error(f"Cannot connect to Ollama at {ollama_base_url}. Ensure Ollama is running.")
+                    st.stop()
+
                 status.write("🚀 Starting research session...")
                 status.write(f"🧠 Using model: {final_model}")
                 status.write(f"🔢 Context limit: {max_context_tokens} tokens")
+
+                # Track all sources gathered during research for deduplication
+                all_sources = []
 
                 # Stream updates from the graph
                 for chunk in graph.stream(initial_state, config=config):
@@ -120,6 +128,7 @@ if prompt := st.chat_input("What would you like to research?"):
 
                         elif node == "web_research":
                             status.write(f"🌐 Conducting web research for: {values['search_query'][0]}")
+                            all_sources.extend(values.get("sources_gathered", []))
                             with st.expander("Details: Web Research & Sources"):
                                 st.write("### Raw Result")
                                 st.write(values.get("web_research_result", ["No result"])[0])
@@ -149,10 +158,18 @@ if prompt := st.chat_input("What would you like to research?"):
                             status.update(label="Research Complete!", state="complete", expanded=False)
                             full_response = values['messages'][0].content
                             message_placeholder.markdown(full_response)
+                            # Deduplicate sources for display
+                            unique_sources = []
+                            seen_links = set()
+                            for source in all_sources:
+                                link = source.get("link", "")
+                                if link not in seen_links:
+                                    unique_sources.append(source)
+                                    seen_links.add(link)
                             with st.expander("Details: Final Answer"):
                                 st.write(full_response)
                                 st.write("### Sources Used")
-                                for source in values.get("sources_gathered", []):
+                                for source in unique_sources:
                                     st.write(f"- [{source.get('title')}]({source.get('link')})")
 
                         status.write(f"✅ Finished step: {node}")

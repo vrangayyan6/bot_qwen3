@@ -1,8 +1,11 @@
-import os
-import threading
+import time
+import random
+import warnings
+
+# Suppress ResourceWarning for unclosed httpx sockets from ChatOllama (known issue on Windows)
+warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*socket")
 
 from agent.tools_and_schemas import SearchQueryList, Reflection
-from dotenv import load_dotenv
 from langchain_core.messages import AIMessage
 from langgraph.types import Send
 from langgraph.graph import StateGraph
@@ -24,7 +27,7 @@ from agent.prompts import (
     answer_instructions,
 )
 from langchain_ollama import ChatOllama
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from agent.utils import (
     get_research_topic,
     format_search_results,
@@ -32,7 +35,6 @@ from agent.utils import (
     TraceLogger,
 )
 
-load_dotenv()
 
 # Nodes
 def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerationState:
@@ -48,7 +50,7 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
     llm = ChatOllama(
         model=configurable.query_generator_model,
         temperature=1.0,
-        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        base_url=configurable.ollama_base_url
     )
     structured_llm = llm.with_structured_output(SearchQueryList)
 
@@ -60,9 +62,18 @@ def generate_query(state: OverallState, config: RunnableConfig) -> QueryGenerati
         number_queries=state["initial_search_query_count"],
     )
     # Generate the search queries
-    result = structured_llm.invoke(formatted_prompt)
-    TraceLogger.log("--- Exiting generate_query ---")
-    return {"search_query": result.query}
+    try:
+        result = structured_llm.invoke(formatted_prompt)
+    except Exception as e:
+        TraceLogger.log(f"LLM invocation failed in generate_query: {e}")
+        raise RuntimeError(
+            f"Failed to connect to Ollama ({configurable.query_generator_model}). "
+            f"Ensure Ollama is running and the model is available. Error: {e}"
+        ) from e
+    # Enforce query count limit (LLMs may ignore the prompt instruction)
+    queries = result.query[:state["initial_search_query_count"]]
+    TraceLogger.log(f"--- Exiting generate_query (returning {len(queries)} queries) ---")
+    return {"search_query": queries}
 
 
 def continue_to_web_research(state: QueryGenerationState):
@@ -85,8 +96,6 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     # Perform Search
     sources_gathered = []
     try:
-        import time
-        import random
         # Add a small random sleep to prevent concurrent initialization deadlocks on Windows
         # especially with curl_cffi when running in parallel.
         time.sleep(random.uniform(0.1, 1.5))
@@ -120,11 +129,11 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     # Limit tokens
     search_results = trim_to_token_limit(search_results, limit=configurable.max_context_tokens)
 
-    # Initialize Ollama
+    # Initialize Ollama (use answer_model for summarization, not query_generator_model)
     llm = ChatOllama(
-        model=configurable.query_generator_model,
+        model=configurable.answer_model,
         temperature=0,
-        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        base_url=configurable.ollama_base_url
     )
 
     formatted_prompt = web_searcher_instructions.format(
@@ -134,7 +143,14 @@ def web_research(state: WebSearchState, config: RunnableConfig) -> OverallState:
     )
 
     TraceLogger.log(f"Invoking Ollama summary for query: {state['search_query']}")
-    response = llm.invoke(formatted_prompt)
+    try:
+        response = llm.invoke(formatted_prompt)
+    except Exception as e:
+        TraceLogger.log(f"LLM invocation failed in web_research: {e}")
+        raise RuntimeError(
+            f"Failed to summarize search results via Ollama ({configurable.answer_model}). "
+            f"Ensure Ollama is running. Error: {e}"
+        ) from e
     TraceLogger.log(f"Ollama summary completed for query: {state['search_query']}")
 
     # If sources wasn't populated due to error or no results, provide a fallback
@@ -157,8 +173,8 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     """LangGraph node that identifies knowledge gaps and generates potential follow-up queries."""
     TraceLogger.log("--- Entering reflection ---")
     configurable = Configuration.from_runnable_config(config)
-    # Increment the research loop count and get the reasoning model
-    state["research_loop_count"] = state.get("research_loop_count", 0) + 1
+    # Compute the incremented research loop count (don't mutate state directly)
+    research_loop_count = state.get("research_loop_count", 0) + 1
     reasoning_model = state.get("reasoning_model", configurable.reflection_model)
 
     # Trim summaries
@@ -176,16 +192,23 @@ def reflection(state: OverallState, config: RunnableConfig) -> ReflectionState:
     llm = ChatOllama(
         model=reasoning_model,
         temperature=1.0,
-        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        base_url=configurable.ollama_base_url
     )
-    result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
+    try:
+        result = llm.with_structured_output(Reflection).invoke(formatted_prompt)
+    except Exception as e:
+        TraceLogger.log(f"LLM invocation failed in reflection: {e}")
+        raise RuntimeError(
+            f"Failed to reflect via Ollama ({reasoning_model}). "
+            f"Ensure Ollama is running. Error: {e}"
+        ) from e
 
     TraceLogger.log("--- Exiting reflection ---")
     return {
         "is_sufficient": result.is_sufficient,
         "knowledge_gap": result.knowledge_gap,
         "follow_up_queries": result.follow_up_queries,
-        "research_loop_count": state["research_loop_count"],
+        "research_loop_count": research_loop_count,
         "number_of_ran_queries": len(state["search_query"]),
     }
 
@@ -241,22 +264,20 @@ def finalize_answer(state: OverallState, config: RunnableConfig):
     llm = ChatOllama(
         model=reasoning_model,
         temperature=0,
-        base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        base_url=configurable.ollama_base_url
     )
-    result = llm.invoke(formatted_prompt)
-
-    # We just filter unique sources for the state record
-    unique_sources = []
-    seen_links = set()
-    for source in state["sources_gathered"]:
-        if source["link"] not in seen_links:
-            unique_sources.append(source)
-            seen_links.add(source["link"])
+    try:
+        result = llm.invoke(formatted_prompt)
+    except Exception as e:
+        TraceLogger.log(f"LLM invocation failed in finalize_answer: {e}")
+        raise RuntimeError(
+            f"Failed to generate final answer via Ollama ({reasoning_model}). "
+            f"Ensure Ollama is running. Error: {e}"
+        ) from e
 
     TraceLogger.log("--- Exiting finalize_answer ---")
     return {
         "messages": [AIMessage(content=result.content)],
-        "sources_gathered": unique_sources,
     }
 
 
