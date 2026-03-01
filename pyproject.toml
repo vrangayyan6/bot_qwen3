@@ -1,7 +1,7 @@
 [project]
 name = "agent"
 version = "0.0.1"
-description = "Backend for the LangGraph agent"
+description = "Research Agent powered by LangGraph, Ollama, and Streamlit"
 authors = [
     { name = "Philipp Schmid", email = "schmidphilipp1995@gmail.com" },
 ]
@@ -28,6 +28,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
+ui = [
+    "streamlit>=1.36.0",
+    "python-dotenv>=1.0.1",
+    "ddgs"
+]
 
 [build-system]
 requires = ["setuptools>=73.0.0", "wheel"]

@@ -9,17 +9,11 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend files
-COPY backend /app/backend
-COPY streamlit_app /app/streamlit_app
+# Copy project files
+COPY . /app/
 
-# Install backend dependencies
-WORKDIR /app/backend
-RUN pip install --no-cache-dir .
-
-# Install Streamlit dependencies
-WORKDIR /app/streamlit_app
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN pip install --no-cache-dir .[ui]
 
 # Expose Streamlit port
 EXPOSE 8501

@@ -22,34 +22,26 @@ This project is a local research agent powered by [LangGraph](https://langchain-
 
 1.  **Clone the repository.**
 
-2.  **Install Backend Dependencies:**
+2.  **Install Dependencies:**
     ```bash
-    cd backend
-    pip install -e .
+    pip install -e .[ui]
     ```
 
-3.  **Install Streamlit Dependencies:**
-    ```bash
-    cd ../streamlit_app
-    pip install -r requirements.txt
-    ```
-
-4.  **Configure Environment (Optional):**
+3.  **Configure Environment (Optional):**
     You can set `OLLAMA_BASE_URL` if your Ollama instance is not at `http://localhost:11434`.
+    Copy `.env.example` to `.env` and configure:
     ```bash
-    # backend/.env
     OLLAMA_BASE_URL="http://localhost:11434"
     ```
 
-5.  **Run the App:**
+4.  **Run the App:**
     ```bash
-    # From streamlit_app directory
     streamlit run app.py
     ```
 
-    or notebook
+    or via notebook:
     ```bash
-     jupyter notebook .\backend\langgraph_ollama.ipynb
+    jupyter notebook langgraph_ollama.ipynb
     ```
 
 ### Option 2: Run with Docker
@@ -65,8 +57,8 @@ This project is a local research agent powered by [LangGraph](https://langchain-
 
 ## Architecture
 
--   **Backend (`backend/`)**: Contains the LangGraph agent logic (`agent/graph.py`) and configuration.
--   **Frontend (`streamlit_app/`)**: A Streamlit application that imports the backend graph and runs it directly.
+-   **Agent (`agent/`)**: Contains the LangGraph agent logic (`graph.py`) and configuration.
+-   **Streamlit UI (`app.py`)**: A Streamlit application that imports the graph and runs it directly.
 
 ## License
 

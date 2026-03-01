@@ -3,16 +3,13 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Add backend source to path so we can import the agent
-sys.path.append(os.path.join(os.path.dirname(__file__), '../backend/src'))
-
 from agent.graph import graph
 from agent.utils import TraceLogger, GLOBAL_TRACE_LOGS
 from langchain_core.messages import HumanMessage
 import time
 
 # Load environment variables
-load_dotenv('../backend/.env')
+load_dotenv()
 
 st.set_page_config(page_title="Research Agent", page_icon="🕵️")
 
