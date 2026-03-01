@@ -54,7 +54,7 @@ This project is a local research agent powered by [LangGraph](https://langchain-
     |------|---------|-------------|
     | `--initial-queries` | `1` | Number of search queries to generate |
     | `--max-loops` | `2` | Maximum research loops |
-    | `--reasoning-model` | `qwen3:4b` | Ollama model to use |
+    | `--reasoning-model` | `gemma3n:e2b` | Ollama model to use |
 
 ### Option 2: Run with Docker
 
