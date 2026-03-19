@@ -23,7 +23,7 @@ with st.sidebar:
     ollama_base_url = st.text_input("Ollama Base URL", value=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
 
     # Updated model options with gemma3n:e2b as default
-    model_options = ["gemma3n:e2b", "gemma3:1b", "qwen3:4b", "gemma3:4b", "llama3.2", "mistral"]
+    model_options = ["gemma3:4b", "gemma3:1b", "qwen3:4b", "llama3.2", "gemma3n:e2b", "mistral"]
     selected_model = st.selectbox(
         "Select Model",
         options=model_options,
@@ -37,7 +37,7 @@ with st.sidebar:
         "Max Context Tokens",
         min_value=500,
         max_value=12000,
-        value=500,
+        value=8000,
         step=500,
         help="Limit the number of tokens sent to the LLM to save VRAM."
     )
