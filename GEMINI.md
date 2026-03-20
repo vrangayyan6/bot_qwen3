@@ -17,7 +17,7 @@ A local research agent powered by **LangGraph**, **Ollama**, and **DuckDuckGo**.
 
 ## Tech Stack
 - **Framework**: [LangGraph](https://langchain-ai.github.io/langgraph/)
-- **LLM Provider**: [Ollama](https://ollama.com/) (default: `gemma3:1b`, `qwen3:4b` for sub-tasks)
+- **LLM Provider**: [Ollama](https://ollama.com/) (default: `gemma3:1b`, `gemma3:4b` for sub-tasks)
 - **Search**: [DuckDuckGo](https://duckduckgo.com/) (via `ddgs`)
 - **UI**: [Streamlit](https://streamlit.io/)
 - **Configuration**: [Pydantic](https://docs.pydantic.dev/)
@@ -26,7 +26,7 @@ A local research agent powered by **LangGraph**, **Ollama**, and **DuckDuckGo**.
 
 ### Setup
 1. `pip install -e .[dev,ui]`
-2. `ollama pull gemma3:1b` (or other models specified in `.env`)
+2. `ollama pull gemma3:1b && ollama pull gemma3:4b` (or other models specified in `.env`)
 3. `cp .env.example .env` and configure `OLLAMA_BASE_URL` if needed.
 
 ### Running

@@ -20,17 +20,30 @@ st.caption("Powered by LangGraph, Ollama, and DuckDuckGo")
 with st.sidebar:
     st.header("Configuration")
 
-    ollama_base_url = st.text_input("Ollama Base URL", value=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
-
-    # Updated model options with gemma3n:e2b as default
+    # Updated model options with role-specific defaults
     model_options = ["gemma3:4b", "gemma3:1b", "qwen3:4b", "llama3.2", "gemma3n:e2b", "mistral"]
-    selected_model = st.selectbox(
-        "Select Model",
+    
+    st.markdown("### Model Selection")
+    query_model = st.selectbox(
+        "Query Model (Fast)",
         options=model_options,
-        index=0
+        index=1, # Default to gemma3:1b
+        help="Lightweight model for generating search queries."
     )
-    custom_model = st.text_input("Or enter custom model name (e.g., 'phi3:mini')")
-    final_model = custom_model if custom_model else selected_model
+    reflection_model = st.selectbox(
+        "Reflection Model (Smart)",
+        options=model_options,
+        index=0, # Default to gemma3:4b
+        help="More powerful model to identify knowledge gaps."
+    )
+    answer_model = st.selectbox(
+        "Answer Model (Smart)",
+        options=model_options,
+        index=0, # Default to gemma3:4b
+        help="Powerful model for synthesizing the final research report."
+    )
+    
+    ollama_base_url = st.text_input("Ollama Base URL", value=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
 
     # Token limit input
     max_context_tokens = st.number_input(
@@ -76,15 +89,15 @@ if prompt := st.chat_input("What would you like to research?"):
             "messages": [HumanMessage(content=prompt)],
             "initial_search_query_count": 1,  # Default
             "max_research_loops": 2,         # Default
-            "reasoning_model": final_model    # Use selected model
+            "reasoning_model": answer_model    # Primary model for state
         }
 
         # Configure run with dynamic model selection, token limit, and Ollama URL
         config = {
             "configurable": {
-                "query_generator_model": final_model,
-                "reflection_model": final_model,
-                "answer_model": final_model,
+                "query_generator_model": query_model,
+                "reflection_model": reflection_model,
+                "answer_model": answer_model,
                 "max_context_tokens": max_context_tokens,
                 "ollama_base_url": ollama_base_url,
             }
@@ -104,7 +117,9 @@ if prompt := st.chat_input("What would you like to research?"):
                     st.stop()
 
                 status.write("🚀 Starting research session...")
-                status.write(f"🧠 Using model: {final_model}")
+                status.write(f"🔍 Query Model: {query_model}")
+                status.write(f"🤔 Reflection Model: {reflection_model}")
+                status.write(f"📝 Answer Model: {answer_model}")
                 status.write(f"🔢 Context limit: {max_context_tokens} tokens")
 
                 # Track all sources gathered during research for deduplication
